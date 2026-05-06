@@ -787,7 +787,9 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
         img.src=dataUrl;
       });
       const thumb=await compressPhoto(startPhoto);
-      const locRecord={...locObj,userId:user.id,userName:user.name,role:user.role,
+      const locRecord={...locObj,
+        location:startLoc,  // explicit field for admin panel
+        userId:user.id,userName:user.name,role:user.role,
         photo:thumb,taskId:init.id,
         taskTitle:init.roundId&&init.location?init.location:init.title};
       await stor.set(SK.locPrefix+user.id,locRecord);
@@ -1381,7 +1383,7 @@ export default function App(){
   const handleCheckin=async locName=>{
     const loc={name:locName,time:tf(),date:tod()};
     setLocation(loc);
-    if(user) await stor.set(SK.locPrefix+user.id,{...loc,userId:user.id,userName:user.name,role:user.role});
+    if(user) await stor.set(SK.locPrefix+user.id,{...loc,location:locName,userId:user.id,userName:user.name,role:user.role});
   };
 
   // Checkout — after photo confirmed
