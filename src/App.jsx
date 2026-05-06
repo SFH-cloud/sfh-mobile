@@ -713,7 +713,9 @@ function TaskCard({task,t,onClick}){
 function TaskDetail({task:init,user,t,onBack,onSave,location}){
   const [task,setTask]=useState({...init,checklist:init.checklist||[]});
   const [note,setNote]=useState("");
-  const [photos,setPhotos]=useState(init.photos||[]);
+  // If task has inspectionNote (sent back), require a NEW photo — don't accept old ones
+  const hasReturnNote=!!init.inspectionNote;
+  const [photos,setPhotos]=useState(hasReturnNote?[]:init.photos||[]);
   const [showCam,setShowCam]=useState(false);
   // "started" = user confirmed location + pressed Start Work
   const [started,setStarted]=useState(init.status==="in_progress"||init.status==="done");
@@ -726,7 +728,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
     const cl=task.checklist.map((c,idx)=>idx===i?{...c,done:!c.done}:c);
     save({checklist:cl,status:task.status==="done"?"done":"in_progress"});
   };
-  const handleCapture=dataUrl=>{const p=[...photos,{id:uid(),dataUrl,time:tf()}];setPhotos(p);save({photos:p});};
+  const handleCapture=dataUrl=>{const p=[...photos,{id:uid(),dataUrl,time:tf()}];setPhotos(p);save({photos:p,inspectionNote:task.inspectionNote});};
   const pc=PC[task.priority]||"#6b7280";
   const done=task.checklist.filter(c=>c.done).length,total=task.checklist.length;
 
@@ -849,11 +851,17 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
         <CC t={t} style={{marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:13,fontWeight:700,color:t.text}}>
-              Photo Evidence {photos.length>0&&<span style={{color:t.accent}}>({photos.length})</span>}
+              {hasReturnNote?"📷 Correction Photo":"Photo Evidence"} {photos.length>0&&<span style={{color:t.accent}}>({photos.length})</span>}
             </div>
             {photos.length===0&&<span style={{fontSize:10,color:"#ef4444",fontWeight:700}}>Required ★</span>}
           </div>
-          {photos.length===0&&(
+          {hasReturnNote&&photos.length===0&&(
+            <div style={{background:"#f9731615",border:"1px solid #f9731644",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              <div style={{fontSize:12,color:"#f97316",fontWeight:700,marginBottom:2}}>New photo required to confirm correction</div>
+              <div style={{fontSize:11,color:"#f9731488"}}>Previous photos are not accepted — take a new photo showing the issue has been resolved</div>
+            </div>
+          )}
+          {!hasReturnNote&&photos.length===0&&(
             <div style={{background:"#ef444412",border:"1px solid #ef444433",borderRadius:10,padding:"10px 12px",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
               <Ic d={P.cam} s={16} c="#ef4444"/>
               <span style={{fontSize:12,color:"#ef4444"}}>A photo is required before marking as complete</span>
@@ -884,12 +892,30 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
           </button>
         ):(
           <button onClick={()=>{
-            save({status:"done"});
-            // Return to tasks list after marking complete
-            if(task.status!=="done") setTimeout(()=>onBack(),400);
+            if(task.status!=="done"){
+              // If this was a returned task, archive the inspectionNote into history
+              const resubmitEntry = task.inspectionNote ? {
+                date: new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}),
+                note: task.inspectionNote,
+                by: user.name,
+                type: "resolved",
+                resolvedNote: note.trim()||"Correction completed",
+              } : null;
+              const updatedHistory = resubmitEntry
+                ? [...(task.inspectionHistory||[]).slice(0,-1), // replace last entry
+                   {...(task.inspectionHistory||[]).slice(-1)[0]||{}, resolved:true, resolvedBy:user.name, resolvedAt:new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}), resolvedNote:note.trim()||"Correction completed"}]
+                : task.inspectionHistory;
+              save({
+                status:"done",
+                inspectionNote:null,  // clear the note — issue resolved
+                inspectionHistory:updatedHistory||task.inspectionHistory,
+                photos,               // save new photos
+              });
+              setTimeout(()=>onBack(),400);
+            }
           }} style={{width:"100%",padding:"15px",background:task.status==="done"?"#22c55e22":t.accent,border:`2px solid ${task.status==="done"?"#22c55e":t.accent}`,borderRadius:14,color:task.status==="done"?"#22c55e":"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <Ic d={P.ok} s={18} c={task.status==="done"?"#22c55e":"#000"} sw={2.5}/>
-            {task.status==="done"?"✓ Completed":"Mark as Complete"}
+            {task.status==="done"?"✓ Completed":hasReturnNote?"✓ Submit Correction":"Mark as Complete"}
           </button>
         )}
       </div>}
