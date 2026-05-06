@@ -749,12 +749,26 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
 
   const taskLoc = task.location||"";
 
-  const handleStart=()=>{
+  const handleStart=async()=>{
     setStarted(true);
-    // Save start photo alongside status and confirmed location
     const startPhotos=[{id:uid(),dataUrl:startPhoto,time:tf(),type:"start"},...(hasReturnNote?[]:init.photos||[])];
     setPhotos(startPhotos);
-    save({status:"in_progress",startLocation:startLoc,startPhoto,photos:startPhotos});
+    save({status:"in_progress",startLocation:startLoc,photos:startPhotos});
+    // Push live location WITH start photo to Supabase — visible in admin Live Locations
+    if(user){
+      await stor.set(SK.locPrefix+user.id,{
+        location:startLoc,
+        name:startLoc,
+        time:tf(),
+        date:tod(),
+        userId:user.id,
+        userName:user.name,
+        role:user.role,
+        photo:startPhoto,          // start photo shown in admin live locations
+        taskId:init.id,
+        taskTitle:init.roundId&&init.location?init.location:init.title,
+      });
+    }
   };
 
   if(showStartCam)return <LiveCamera t={t} title="Start Work Photo" onCapture={p=>{setStartPhoto(p);setShowStartCam(false);}} onClose={()=>setShowStartCam(false)}/>;
@@ -935,8 +949,10 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
             {hasReturnNote?"📷 Take Correction Photo First":"Take Photo to Complete"}
           </button>
         ):(
-          <button onClick={()=>{
+          <button onClick={async()=>{
             if(task.status!=="done"){
+              // Clear live location when task is completed
+              if(user) await stor.del(SK.locPrefix+user.id);
               // If this was a returned task, archive the inspectionNote into history
               const resubmitEntry = task.inspectionNote ? {
                 date: new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}),
