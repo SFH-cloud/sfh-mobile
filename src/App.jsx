@@ -705,7 +705,11 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   const displayTitle = task.roundId&&task.location ? task.location : task.title;
 
   const save=upd=>{const u={...task,...upd};setTask(u);onSave(u);};
-  const toggleCheck=i=>{const cl=task.checklist.map((c,idx)=>idx===i?{...c,done:!c.done}:c);save({checklist:cl,status:cl.every(c=>c.done)?"done":"in_progress"});};
+  // Never auto-set done — photo is required before completing
+  const toggleCheck=i=>{
+    const cl=task.checklist.map((c,idx)=>idx===i?{...c,done:!c.done}:c);
+    save({checklist:cl,status:task.status==="done"?"done":"in_progress"});
+  };
   const handleCapture=dataUrl=>{const p=[...photos,{id:uid(),dataUrl,time:tf()}];setPhotos(p);save({photos:p});};
   const pc=PC[task.priority]||"#6b7280";
   const done=task.checklist.filter(c=>c.done).length,total=task.checklist.length;
@@ -863,7 +867,11 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
             Take Photo to Complete
           </button>
         ):(
-          <button onClick={()=>save({status:"done"})} style={{width:"100%",padding:"15px",background:task.status==="done"?"#22c55e22":t.accent,border:`2px solid ${task.status==="done"?"#22c55e":t.accent}`,borderRadius:14,color:task.status==="done"?"#22c55e":"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <button onClick={()=>{
+            save({status:"done"});
+            // Return to tasks list after marking complete
+            if(task.status!=="done") setTimeout(()=>onBack(),400);
+          }} style={{width:"100%",padding:"15px",background:task.status==="done"?"#22c55e22":t.accent,border:`2px solid ${task.status==="done"?"#22c55e":t.accent}`,borderRadius:14,color:task.status==="done"?"#22c55e":"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <Ic d={P.ok} s={18} c={task.status==="done"?"#22c55e":"#000"} sw={2.5}/>
             {task.status==="done"?"✓ Completed":"Mark as Complete"}
           </button>
