@@ -40,10 +40,9 @@ const PORTER_TEMPLATES = {
   "End of Shift":["Take Newspapers to Room Service","Floats back on charge","Ensure floats clean","New Damage Checks","Hand Over to Early Shift","Photo uploaded"],
 };
 const CONSUMABLES = [
-  {id:"c1", name:"Toilet Paper",           icon:"🧻"},
   {id:"c2", name:"Multi-surface Spray",    icon:"🫧"},
-  {id:"c3", name:"Bleach Spray",           icon:"🧴"},
-  {id:"c4", name:"Window Cleaner Spray",   icon:"🪟"},
+  {id:"c3", name:"Bleach Spray",           icon:"🫧"},
+  {id:"c4", name:"Window Cleaner Spray",   icon:"🫧"},
   {id:"c5", name:"Disinfectant Spray",     icon:"🧼"},
   {id:"c6", name:"Floor Cleaner",          icon:"🪣"},
   {id:"c7", name:"Toilet Descaler",        icon:"🚽"},
@@ -716,6 +715,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   // If task has inspectionNote (sent back), require a NEW photo — don't accept old ones
   const hasReturnNote=!!init.inspectionNote;
   const [photos,setPhotos]=useState(hasReturnNote?[]:init.photos||[]);
+  // Evidence photos = all photos EXCEPT the start photo
+  // Start photo is only for live location tracking, not task evidence
   const [showCam,setShowCam]=useState(false);
   const [showStartCam,setShowStartCam]=useState(false);
   const [startLoc,setStartLoc]=useState(location?.name||"");
@@ -746,6 +747,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   };
   const pc=PC[task.priority]||"#6b7280";
   const done=task.checklist.filter(c=>c.done).length,total=task.checklist.length;
+  // Only non-start photos count as evidence
+  const evidencePhotos=photos.filter(p=>p.type!=="start");
 
   const taskLoc = task.location||"";
 
@@ -880,7 +883,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           {["pending","in_progress","done"].map(s=>{
             const a=task.status===s,c=SC[s];
-            const blocked=s==="done"&&(hasReturnNote?!correctionPhotoDone:photos.length===0)&&task.status!=="done";
+            const blocked=s==="done"&&(hasReturnNote?!correctionPhotoDone:evidencePhotos.length===0)&&task.status!=="done";
             return(
               <button key={s} onClick={()=>!blocked&&save({status:s})}
                 title={blocked?"Take a photo first":""}
@@ -920,22 +923,22 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
             <div style={{fontSize:13,fontWeight:700,color:t.text}}>
               {hasReturnNote?"📷 Correction Photo":"Photo Evidence"} {photos.length>0&&<span style={{color:t.accent}}>({photos.length})</span>}
             </div>
-            {photos.length===0&&<span style={{fontSize:10,color:"#ef4444",fontWeight:700}}>Required ★</span>}
+            {evidencePhotos.length===0&&<span style={{fontSize:10,color:"#ef4444",fontWeight:700}}>Required ★</span>}
           </div>
-          {hasReturnNote&&photos.length===0&&(
+          {hasReturnNote&&!correctionPhotoDone&&(
             <div style={{background:"#f9731615",border:"1px solid #f9731644",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
               <div style={{fontSize:12,color:"#f97316",fontWeight:700,marginBottom:2}}>New photo required to confirm correction</div>
               <div style={{fontSize:11,color:"#f9731488"}}>Previous photos are not accepted — take a new photo showing the issue has been resolved</div>
             </div>
           )}
-          {!hasReturnNote&&photos.length===0&&(
+          {!hasReturnNote&&evidencePhotos.length===0&&(
             <div style={{background:"#ef444412",border:"1px solid #ef444433",borderRadius:10,padding:"10px 12px",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
               <Ic d={P.cam} s={16} c="#ef4444"/>
               <span style={{fontSize:12,color:"#ef4444"}}>A photo is required before marking as complete</span>
             </div>
           )}
-          {photos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-            {photos.map(ph=>(
+          {evidencePhotos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+            {evidencePhotos.map(ph=>(
               <div key={ph.id} style={{width:68,height:68,borderRadius:10,overflow:"hidden",position:"relative"}}>
                 {ph.dataUrl?<img src={ph.dataUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",background:`${t.accent}15`,border:`1px solid ${t.accent}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic d={P.cam} s={20} c={t.accent}/></div>}
                 <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#000000aa",fontSize:7,color:"#fff",padding:"2px 4px",textAlign:"center"}}>{ph.time}</div>
@@ -958,7 +961,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
         {/* Photo required before completing.
             For normal tasks: need at least one photo.
             For return tasks: need a NEW correction photo (correctionPhotoDone). */}
-        {(hasReturnNote ? !correctionPhotoDone : photos.length===0)&&task.status!=="done"?(
+        {(hasReturnNote ? !correctionPhotoDone : evidencePhotos.length===0)&&task.status!=="done"?(
           <button onClick={()=>setShowCam(true)} style={{width:"100%",padding:"15px",background:"#ef444422",border:"2px solid #ef444466",borderRadius:14,color:"#ef4444",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <Ic d={P.cam} s={18} c="#ef4444"/>
             {hasReturnNote?"📷 Take Correction Photo First":"Take Photo to Complete"}
@@ -1032,19 +1035,20 @@ function RepairsScreen({user,t,repairs,onAdd}){
   );
 }
 
-function OrdersScreen({user,t,orders,onAdd}){
+function OrdersScreen({user,t,orders,onAdd,customProducts=[]}){
   const [cart,setCart]=useState({});
   const [loc,setLoc]=useState(LOCATIONS[0]);
   const [done,setDone]=useState(false);
+  const allProducts=[...CONSUMABLES,...customProducts];
   const setQ=(id,d)=>setCart(c=>{const n={...c},q=Math.max(0,(n[id]||0)+d);if(!q)delete n[id];else n[id]=q;return n;});
   const count=Object.values(cart).reduce((a,b)=>a+b,0);
-  const submit=()=>{if(!count)return;onAdd({id:uid(),items:Object.entries(cart).map(([id,qty])=>({...CONSUMABLES.find(c=>c.id===id),qty})),location:loc,requestedBy:user.id,status:"pending",date:tod()});setCart({});setDone(true);setTimeout(()=>setDone(false),2500);};
+  const submit=()=>{if(!count)return;onAdd({id:uid(),items:Object.entries(cart).map(([id,qty])=>({...allProducts.find(c=>c.id===id),qty})),location:loc,requestedBy:user.id,status:"pending",date:tod()});setCart({});setDone(true);setTimeout(()=>setDone(false),2500);};
   if(done)return <div style={{padding:"80px 20px",textAlign:"center"}}><div style={{fontSize:52}}>✅</div><div style={{fontSize:22,fontWeight:800,color:t.accent,fontFamily:"'DM Serif Display',serif",marginTop:12}}>Order Submitted!</div></div>;
   return(
     <div style={{padding:"16px"}}>
       <div style={{fontSize:18,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:4}}>Order Supplies</div>
       <div style={{marginBottom:14}}><Lbl>Delivery Location</Lbl><Sel value={loc} onChange={e=>setLoc(e.target.value)}>{LOCATIONS.map(l=><option key={l}>{l}</option>)}</Sel></div>
-      {CONSUMABLES.map(c=><CC key={c.id} t={t} style={{marginBottom:8,display:"flex",alignItems:"center",gap:12,padding:"12px 14px"}}>
+      {allProducts.map(c=><CC key={c.id} t={t} style={{marginBottom:8,display:"flex",alignItems:"center",gap:12,padding:"12px 14px"}}>
         <div style={{fontSize:26,flexShrink:0}}>{c.icon}</div>
         <div style={{flex:1}}><div style={{color:t.text,fontSize:13,fontWeight:600}}>{c.name}</div></div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1185,28 +1189,23 @@ function Dashboard({user,tasks,location,t,onNav,onCheckin,onCheckout}){
 }
 
 function TasksList({user,tasks,t,onNav}){
-  const [mine,setMine]=useState(true);
   const [st,setSt]=useState("pending");
   const f=tasks.filter(tk=>{
-    if(mine&&tk.assigneeId!==user.id)return false;
+    if(tk.assigneeId!==user.id)return false;
     if(st==="pending"&&!["pending","in_progress"].includes(tk.status))return false;
     if(st==="done"&&tk.status!=="done")return false;
     return true;
   });
+  const sorted=[...f].sort((a,b)=>(!!b.inspectionNote)-(!!a.inspectionNote));
   return(
     <div style={{padding:"16px"}}>
-      <div style={{fontSize:18,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:12}}>Tasks</div>
-      <div style={{display:"flex",gap:6,marginBottom:8}}>
-        {[["mine","My Tasks"],["all","All"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setMine(v==="mine")} style={{flex:1,padding:"9px",borderRadius:10,background:mine===(v==="mine")?t.accent:"transparent",border:`1px solid ${mine===(v==="mine")?t.accent:t.border}`,color:mine===(v==="mine")?"#000":t.sub,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>
-        ))}
-      </div>
+      <div style={{fontSize:18,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:12}}>My Tasks</div>
       <div style={{display:"flex",gap:6,marginBottom:14}}>
-        {[["pending","Pending"],["done","Done"],["all","All"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setSt(v)} style={{flex:1,padding:"7px 4px",borderRadius:20,background:st===v?`${SC[v]||t.accent}22`:"transparent",border:`1px solid ${st===v?(SC[v]||t.accent):t.border}`,color:st===v?(SC[v]||t.accent):t.sub,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>
+        {[["pending","Active"],["done","Done"],["all","All"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setSt(v)} style={{flex:1,padding:"9px 4px",borderRadius:10,background:st===v?`${SC[v]||t.accent}22`:"transparent",border:`1px solid ${st===v?(SC[v]||t.accent):t.border}`,color:st===v?(SC[v]||t.accent):t.sub,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>
         ))}
       </div>
-      {f.length===0?<div style={{textAlign:"center",padding:"48px 0",color:t.sub}}>No tasks found</div>:f.map(tk=><TaskCard key={tk.id} task={tk} t={t} onClick={()=>onNav("taskDetail",tk)}/>)}
+      {sorted.length===0?<div style={{textAlign:"center",padding:"48px 0",color:t.sub}}>No tasks found</div>:sorted.map(tk=><TaskCard key={tk.id} task={tk} t={t} onClick={()=>onNav("taskDetail",tk)}/>)}
     </div>
   );
 }
@@ -1273,6 +1272,7 @@ export default function App(){
   const [orders,setOrders]           = useState([]);
   const [inspections,setInspections] = useState([]);
   const [location,setLocation]       = useState(null); // {name, time}
+  const [customProducts,setCustomProducts] = useState([]);
   const [tab,setTab]                 = useState("dashboard");
   const [nav,setNav]                 = useState({screen:"dashboard",data:null});
   const [showCheckin,setShowCheckin] = useState(false);
@@ -1280,15 +1280,16 @@ export default function App(){
   const [loading,setLoading]         = useState(true);
 
   const loadData=useCallback(async()=>{
-    const [tk,r,o,ins,ep]=await Promise.all([
+    const [tk,r,o,ins,ep,cp]=await Promise.all([
       stor.get(SK.tasks),stor.get(SK.repairs),stor.get(SK.orders),
-      stor.get(SK.inspections),stor.get(SK.profiles),
+      stor.get(SK.inspections),stor.get(SK.profiles),stor.get("sh5_custom_products"),
     ]);
     if(tk!==null)setTasks(tk);
     if(r!==null)setRepairs(r);
     if(o!==null)setOrders(o);
     if(ins!==null)setInspections(ins);
     if(ep!==null)setExtraProfiles(ep);
+    if(cp!==null)setCustomProducts(cp);
   },[]);
 
   useEffect(()=>{
