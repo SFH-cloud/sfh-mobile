@@ -29,7 +29,7 @@ const NFC_LOCATION_TAGS = {
   "NFC-LOC-CHK":"Check-out House","NFC-LOC-GAT":"Gate House",
   "NFC-LOC-CLB":"Club Reception + Office","NFC-LOC-BRJ":"Berenjak","NFC-LOC-BLK":"Blake's",
 };
-const LOCATIONS = Object.values(NFC_LOCATION_TAGS);
+const LOCATIONS = Object.values(NFC_LOCATION_TAGS).sort((a,b)=>a.localeCompare(b));
 
 const PORTER_TEMPLATES = {
   "Float Check":["Is the Float charged?","Is the float clean?","Brakes & Handbrake","Mirrors","Tires","Lights","Step Function","Check For Damage","Photo uploaded"],
@@ -717,6 +717,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   const [photos,setPhotos]=useState(hasReturnNote?[]:init.photos||[]);
   // Evidence photos = all photos EXCEPT the start photo
   // Start photo is only for live location tracking, not task evidence
+  // Compress all evidence photos to max 600px JPEG 0.7 before saving
   const [showCam,setShowCam]=useState(false);
   const [showStartCam,setShowStartCam]=useState(false);
   const [startLoc,setStartLoc]=useState(location?.name||"");
@@ -735,8 +736,20 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
     save({checklist:cl,status:task.status==="done"?"done":"in_progress"});
   };
   // handleCapture preserves all existing task fields including notes
-  const handleCapture=dataUrl=>{
-    const p=[...photos,{id:uid(),dataUrl,time:tf()}];
+  const handleCapture=async(dataUrl)=>{
+    // Compress before saving — max 600px wide, 70% quality JPEG
+    const compressed=await new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>{
+        const s=Math.min(1,600/img.width);
+        const c=document.createElement("canvas");
+        c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+        c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+        res(c.toDataURL("image/jpeg",0.7));
+      };
+      img.src=dataUrl;
+    });
+    const p=[...photos,{id:uid(),dataUrl:compressed,time:tf()}];
     setPhotos(p);
     if(hasReturnNote) setCorrectionPhotoDone(true);
     setTask(prev=>{
