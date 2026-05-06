@@ -666,25 +666,41 @@ function TaskCard({task,t,onClick}){
   const pc=PC[task.priority]||"#6b7280",sc=SC[task.status]||"#6b7280";
   const em={checklist:"✓",porter:"🚗",repair:"🔧",emergency:"⚡",order:"🛒",inspection:"⭐",general:"📋",reception:"📞"}[task.type]||"📋";
   const prog=task.checklist?.length?Math.round(task.checklist.filter(c=>c.done).length/task.checklist.length*100):null;
+  const hasIssue=!!task.inspectionNote;
   return(
-    <div onClick={onClick} style={{background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:"13px 14px",marginBottom:8,cursor:"pointer",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:pc,borderRadius:"14px 0 0 14px"}}/>
+    <div onClick={onClick} style={{background:hasIssue?"#1a0808":t.card,border:`1px solid ${hasIssue?"#ef444466":t.border}`,borderRadius:14,padding:"13px 14px",marginBottom:8,cursor:"pointer",position:"relative",overflow:"hidden"}}>
+      {/* Left accent bar — red for issues */}
+      <div style={{position:"absolute",left:0,top:0,bottom:0,width:hasIssue?5:3,background:hasIssue?"#ef4444":pc,borderRadius:"14px 0 0 14px"}}/>
+      {/* Issue banner at top */}
+      {hasIssue&&(
+        <div style={{marginLeft:8,marginBottom:8,background:"#ef444422",border:"1px solid #ef444455",borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:14}}>⚠️</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:"#ef4444",fontWeight:800}}>Management feedback — correction required</div>
+            <div style={{fontSize:10,color:"#ef444488",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.inspectionNote?.split("
+")[1]||"Tap to see details"}</div>
+          </div>
+        </div>
+      )}
       <div style={{marginLeft:8}}>
         <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:prog!==null?8:4}}>
-          <div style={{width:34,height:34,borderRadius:10,background:`${pc}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{em}</div>
+          <div style={{width:34,height:34,borderRadius:10,background:hasIssue?"#ef444422":`${pc}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{hasIssue?"⚠️":em}</div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{color:t.text,fontSize:14,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+            <div style={{color:hasIssue?"#ef4444":t.text,fontSize:14,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
               {task.roundId&&task.location ? task.location : task.title}
             </div>
             {task.roundId&&task.location&&<div style={{color:t.sub,fontSize:10,marginTop:1}}>📍 {task.location}</div>}
             {!task.roundId&&<div style={{color:t.sub,fontSize:11,marginTop:2}}>📍 {task.location||"—"}</div>}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end",flexShrink:0}}>
-            <Chip label={task.priority} color={pc} sm/>
-            <Chip label={task.status==="in_progress"?"In Prog.":task.status} color={sc} sm/>
+            {hasIssue
+              ?<span style={{background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,padding:"3px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:.5}}>Return</span>
+              :<Chip label={task.priority} color={pc} sm/>
+            }
+            <Chip label={task.status==="in_progress"?"In Prog.":task.status} color={hasIssue?"#ef4444":sc} sm/>
           </div>
         </div>
-        {prog!==null&&<><div style={{height:3,background:t.border,borderRadius:3,overflow:"hidden",marginBottom:3}}><div style={{height:"100%",width:`${prog}%`,background:t.accent,borderRadius:3}}/></div><div style={{fontSize:9,color:t.sub,textAlign:"right"}}>{prog}%</div></>}
+        {prog!==null&&<><div style={{height:3,background:t.border,borderRadius:3,overflow:"hidden",marginBottom:3}}><div style={{height:"100%",width:`${prog}%`,background:hasIssue?"#ef4444":t.accent,borderRadius:3}}/></div><div style={{fontSize:9,color:t.sub,textAlign:"right"}}>{prog}%</div></>}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
           {task.recurring&&task.recurring!=="none"&&<span style={{fontSize:9,color:t.sub}}>🔁 {task.recurring}</span>}
           <span style={{fontSize:10,color:t.sub,marginLeft:"auto"}}>{df(task.dueDate)}</span>
