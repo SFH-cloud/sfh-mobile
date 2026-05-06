@@ -717,6 +717,9 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   const hasReturnNote=!!init.inspectionNote;
   const [photos,setPhotos]=useState(hasReturnNote?[]:init.photos||[]);
   const [showCam,setShowCam]=useState(false);
+  const [showStartCam,setShowStartCam]=useState(false);
+  const [startLoc,setStartLoc]=useState(location?.name||"");
+  const [startPhoto,setStartPhoto]=useState(null);
   // "started" = user confirmed location + pressed Start Work
   const [started,setStarted]=useState(init.status==="in_progress"||init.status==="done");
 
@@ -728,20 +731,30 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
     const cl=task.checklist.map((c,idx)=>idx===i?{...c,done:!c.done}:c);
     save({checklist:cl,status:task.status==="done"?"done":"in_progress"});
   };
-  const handleCapture=dataUrl=>{const p=[...photos,{id:uid(),dataUrl,time:tf()}];setPhotos(p);save({photos:p,inspectionNote:task.inspectionNote});};
+  // handleCapture preserves all existing task fields including notes
+  const handleCapture=dataUrl=>{
+    const p=[...photos,{id:uid(),dataUrl,time:tf()}];
+    setPhotos(p);
+    setTask(prev=>{
+      const updated={...prev,photos:p};
+      onSave(updated);
+      return updated;
+    });
+  };
   const pc=PC[task.priority]||"#6b7280";
   const done=task.checklist.filter(c=>c.done).length,total=task.checklist.length;
 
-  // Location match check — is user checked into the right area?
-  const currentLoc = location?.name||"";
   const taskLoc = task.location||"";
-  const locationMatch = !taskLoc || !currentLoc || currentLoc===taskLoc;
 
   const handleStart=()=>{
     setStarted(true);
-    save({status:"in_progress"});
+    // Save start photo alongside status and confirmed location
+    const startPhotos=[{id:uid(),dataUrl:startPhoto,time:tf(),type:"start"},...(hasReturnNote?[]:init.photos||[])];
+    setPhotos(startPhotos);
+    save({status:"in_progress",startLocation:startLoc,startPhoto,photos:startPhotos});
   };
 
+  if(showStartCam)return <LiveCamera t={t} title="Start Work Photo" onCapture={p=>{setStartPhoto(p);setShowStartCam(false);}} onClose={()=>setShowStartCam(false)}/>;
   if(showCam)return <LiveCamera t={t} title="Task Evidence Photo" onCapture={handleCapture} onClose={()=>setShowCam(false)}/>;
 
   return(
@@ -762,21 +775,6 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
       {/* ── START WORK CONFIRMATION ─────────────────────────────── */}
       {!started&&(
         <div style={{padding:"24px 16px"}}>
-          {/* Location check */}
-          {!locationMatch&&(
-            <div style={{background:"#ef444415",border:"1px solid #ef444444",borderRadius:14,padding:"14px 16px",marginBottom:16,display:"flex",gap:12}}>
-              <span style={{fontSize:22}}>⚠️</span>
-              <div>
-                <div style={{color:"#ef4444",fontWeight:700,fontSize:14}}>Wrong Location</div>
-                <div style={{color:"#ef444488",fontSize:12,marginTop:3}}>
-                  This task is for <strong style={{color:"#ef4444"}}>{taskLoc}</strong>.<br/>
-                  You are currently checked in at <strong style={{color:"#ef4444"}}>{currentLoc}</strong>.<br/>
-                  Please check in to the correct location first.
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Task summary */}
           <div style={{background:t.card,border:`1px solid ${t.border}`,borderRadius:16,padding:"20px",marginBottom:20}}>
             <div style={{fontSize:22,marginBottom:8}}>📍</div>
@@ -794,17 +792,54 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
             </div>}
           </div>
 
-          <button
-            onClick={handleStart}
-            disabled={!locationMatch&&!!currentLoc}
-            style={{width:"100%",padding:"16px",background:(!locationMatch&&!!currentLoc)?"#333":t.accent,border:"none",borderRadius:14,color:(!locationMatch&&!!currentLoc)?"#666":"#000",fontWeight:800,fontSize:16,cursor:(!locationMatch&&!!currentLoc)?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-            {(!locationMatch&&!!currentLoc)?"Check in to correct location first":"▶ Start Work"}
-          </button>
-          {!currentLoc&&(
-            <div style={{fontSize:11,color:t.sub,textAlign:"center",marginTop:10}}>
-              Tap your NFC tag first to confirm your location
+          {/* Step 1 — Select location manually */}
+          <div style={{background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:"16px",marginBottom:12}}>
+            <div style={{fontSize:11,color:t.sub,textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:8}}>
+              Step 1 — Confirm Location
+            </div>
+            <select
+              value={startLoc}
+              onChange={e=>setStartLoc(e.target.value)}
+              style={{width:"100%",boxSizing:"border-box",background:"#ffffff09",border:`1px solid ${startLoc?t.accent:t.border}`,borderRadius:10,padding:"11px 14px",color:startLoc?t.text:"#888",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none"}}>
+              <option value="">Select your current location…</option>
+              {LOCATIONS.map(l=><option key={l} value={l}>{l}{l===taskLoc?" ✓ (this task)":""}</option>)}
+            </select>
+            {startLoc&&startLoc!==taskLoc&&(
+              <div style={{marginTop:8,fontSize:11,color:"#f97316"}}>
+                ⚠️ This task is for <strong>{taskLoc}</strong> — are you sure you are at <strong>{startLoc}</strong>?
+              </div>
+            )}
+            {startLoc===taskLoc&&<div style={{marginTop:6,fontSize:11,color:t.accent}}>✓ Correct location</div>}
+          </div>
+
+          {/* Step 2 — Start photo (live camera only) */}
+          {startLoc&&(
+            <div style={{background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:"16px",marginBottom:16}}>
+              <div style={{fontSize:11,color:t.sub,textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:8}}>
+                Step 2 — Take Start Photo
+              </div>
+              {startPhoto?(
+                <div style={{position:"relative",marginBottom:8}}>
+                  <img src={startPhoto} alt="start" style={{width:"100%",height:160,objectFit:"cover",borderRadius:10,display:"block"}}/>
+                  <div style={{position:"absolute",bottom:8,left:8,background:t.accent,borderRadius:6,padding:"3px 10px",fontSize:11,color:"#000",fontWeight:700}}>✓ {tf()}</div>
+                  <button onClick={()=>setStartPhoto(null)} style={{position:"absolute",top:8,right:8,background:"#000000cc",border:"none",borderRadius:20,padding:"4px 10px",color:"#fff",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Retake</button>
+                </div>
+              ):(
+                <button onClick={()=>setShowStartCam(true)} style={{width:"100%",height:120,background:"transparent",border:`2px dashed ${t.accent}66`,borderRadius:10,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
+                  <Ic d={P.cam} s={28} c={t.accent}/>
+                  <span style={{fontSize:13,color:t.accent,fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>📷 Take Start Photo</span>
+                  <span style={{fontSize:10,color:t.sub}}>Live camera only — no gallery</span>
+                </button>
+              )}
             </div>
           )}
+
+          <button
+            onClick={handleStart}
+            disabled={!startLoc||!startPhoto}
+            style={{width:"100%",padding:"16px",background:(!startLoc||!startPhoto)?"#1e1e38":t.accent,border:"none",borderRadius:14,color:(!startLoc||!startPhoto)?"#555":"#000",fontWeight:800,fontSize:16,cursor:(!startLoc||!startPhoto)?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {!startLoc?"Select location first":!startPhoto?"Take start photo first":"▶ Start Work"}
+          </button>
         </div>
       )}
 
@@ -882,7 +917,11 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
         <CC t={t} style={{marginBottom:14}}>
           <div style={{fontSize:13,fontWeight:700,color:t.text,marginBottom:8}}>Add Note</div>
           <TA value={note} onChange={e=>setNote(e.target.value)} placeholder="Leave a note…"/>
-          {note.trim()&&<button onClick={()=>{save({notes:(task.notes?task.notes+"\n":"")+note});setNote("");}} style={{marginTop:8,width:"100%",padding:"10px",background:t.accent,border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Save Note</button>}
+          {note.trim()&&<button onClick={()=>{
+  const updatedNotes=(task.notes&&!task.notes.includes(note.trim())?task.notes+"\n":"")+note.trim();
+  save({notes:updatedNotes,photos,inspectionNote:task.inspectionNote,inspectionHistory:task.inspectionHistory});
+  setNote("");
+}} style={{marginTop:8,width:"100%",padding:"10px",background:t.accent,border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Save Note</button>}
         </CC>
         {/* Photo required before completing */}
         {photos.length===0&&task.status!=="done"?(
