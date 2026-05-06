@@ -1336,7 +1336,7 @@ export default function App(){
   const addInspection=async i=>{const n=[...inspections,i];await stor.set(SK.inspections,n);setInspections(n);};
 
   // ── WEB PUSH SUBSCRIPTION ───────────────────────────────────────────────
-  const VAPID_PUBLIC_KEY = "BPaDMfr8KzDaqVPbRXHB5j0uqh4eVHIJVD5BDNJNrwzZ_Z_odnjnY3DEeq2az0QgA21Q_ZSBaP_F8eFGnPsjhdU";
+  const VAPID_PUBLIC_KEY = "BNKKmPMTbepxpeWeAMvRZzOrDuVpVdQG62UTVjKnY6GAYPRxiGcCvZ5xxAOSNj6GUQoRU2xQUm72chTp7Yx4o3E";
 
   const subscribeToPush = async (userId) => {
     try {
@@ -1347,6 +1347,9 @@ export default function App(){
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return;
       // Subscribe
+      // Unsubscribe from old subscription first (new VAPID key)
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) await existing.unsubscribe();
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: VAPID_PUBLIC_KEY,
