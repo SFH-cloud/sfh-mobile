@@ -1352,8 +1352,9 @@ export default function App(){
         applicationServerKey: VAPID_PUBLIC_KEY,
       });
       // Save subscription to Supabase so admin can send notifications
-      await stor.set('sh5_push_' + userId, JSON.parse(JSON.stringify(sub)));
-      console.log('Push subscription saved for', userId);
+      const subJson = JSON.parse(JSON.stringify(sub));
+      await stor.set('sh5_push_' + userId, subJson);
+      console.log('Push subscription saved for', userId, 'endpoint:', subJson.endpoint?.slice(0,40));
     } catch(e) {
       console.log('Push subscription failed:', e.message);
     }
