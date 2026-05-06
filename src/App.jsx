@@ -1335,12 +1335,38 @@ export default function App(){
   const addOrder=async o=>{const n=[...orders,o];await stor.set(SK.orders,n);setOrders(n);};
   const addInspection=async i=>{const n=[...inspections,i];await stor.set(SK.inspections,n);setInspections(n);};
 
+  // ── WEB PUSH SUBSCRIPTION ───────────────────────────────────────────────
+  const VAPID_PUBLIC_KEY = "BPaDMfr8KzDaqVPbRXHB5j0uqh4eVHIJVD5BDNJNrwzZ_Z_odnjnY3DEeq2az0QgA21Q_ZSBaP_F8eFGnPsjhdU";
+
+  const subscribeToPush = async (userId) => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      // Request permission
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      // Subscribe
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: VAPID_PUBLIC_KEY,
+      });
+      // Save subscription to Supabase so admin can send notifications
+      await stor.set('sh5_push_' + userId, JSON.parse(JSON.stringify(sub)));
+      console.log('Push subscription saved for', userId);
+    } catch(e) {
+      console.log('Push subscription failed:', e.message);
+    }
+  };
+
   const login=async u=>{
     // Clear any previous location on new login — ensures only one active location
     await stor.del(SK.locPrefix+u.id);
     setLocation(null);
     setUser(u);
     await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role,nfc:u.nfc});
+    // Subscribe to push notifications
+    subscribeToPush(u.id);
   };
   const logout=async()=>{
     if(user)await stor.del(SK.locPrefix+user.id);
