@@ -789,11 +789,18 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
       {/* ── TASK CONTENT (only after started) ─────────────────── */}
       {started&&<div style={{padding:"16px"}}>
         <div style={{display:"flex",gap:6,marginBottom:14}}>
-          {["pending","in_progress","done"].map(s=>{const a=task.status===s,c=SC[s];return(
-            <button key={s} onClick={()=>save({status:s})} style={{flex:1,padding:"9px 4px",background:a?`${c}22`:"transparent",border:`1px solid ${a?c:t.border}`,borderRadius:10,cursor:"pointer",color:a?c:t.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,fontFamily:"'DM Sans',sans-serif"}}>
-              {s==="in_progress"?"In Prog.":s.charAt(0).toUpperCase()+s.slice(1)}
-            </button>
-          );})}
+          {["pending","in_progress","done"].map(s=>{
+            const a=task.status===s,c=SC[s];
+            const blocked=s==="done"&&photos.length===0&&task.status!=="done";
+            return(
+              <button key={s} onClick={()=>!blocked&&save({status:s})}
+                title={blocked?"Take a photo first":""}
+                style={{flex:1,padding:"9px 4px",background:a?`${c}22`:"transparent",border:`1px solid ${a?c:blocked?"#333":t.border}`,borderRadius:10,cursor:blocked?"not-allowed":"pointer",color:a?c:blocked?"#333":t.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,fontFamily:"'DM Sans',sans-serif",opacity:blocked?0.4:1}}>
+                {s==="in_progress"?"In Prog.":s.charAt(0).toUpperCase()+s.slice(1)}
+                {blocked&&" 📷"}
+              </button>
+            );
+          })}
         </div>
         {/* Inspection feedback from management — shown prominently */}
         {task.inspectionNote&&(
@@ -820,7 +827,18 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
           ))}
         </CC>}
         <CC t={t} style={{marginBottom:12}}>
-          <div style={{fontSize:13,fontWeight:700,color:t.text,marginBottom:10}}>Photo Evidence {photos.length>0&&<span style={{color:t.accent}}>({photos.length})</span>}</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:13,fontWeight:700,color:t.text}}>
+              Photo Evidence {photos.length>0&&<span style={{color:t.accent}}>({photos.length})</span>}
+            </div>
+            {photos.length===0&&<span style={{fontSize:10,color:"#ef4444",fontWeight:700}}>Required ★</span>}
+          </div>
+          {photos.length===0&&(
+            <div style={{background:"#ef444412",border:"1px solid #ef444433",borderRadius:10,padding:"10px 12px",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+              <Ic d={P.cam} s={16} c="#ef4444"/>
+              <span style={{fontSize:12,color:"#ef4444"}}>A photo is required before marking as complete</span>
+            </div>
+          )}
           {photos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
             {photos.map(ph=>(
               <div key={ph.id} style={{width:68,height:68,borderRadius:10,overflow:"hidden",position:"relative"}}>
@@ -829,8 +847,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
               </div>
             ))}
           </div>}
-          <button onClick={()=>setShowCam(true)} style={{width:"100%",padding:"11px",background:"transparent",border:`2px dashed ${t.accent}44`,borderRadius:10,cursor:"pointer",color:t.accent,fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}>
-            <Ic d={P.cam} s={16} c={t.accent}/>{photos.length===0?"Add Photo (Live Camera)":"Add Another Photo"}
+          <button onClick={()=>setShowCam(true)} style={{width:"100%",padding:"11px",background:photos.length===0?`${t.accent}22`:"transparent",border:`2px dashed ${t.accent}${photos.length===0?"99":"44"}`,borderRadius:10,cursor:"pointer",color:t.accent,fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}>
+            <Ic d={P.cam} s={16} c={t.accent}/>{photos.length===0?"📷 Take Photo (Required)":"Add Another Photo"}
           </button>
         </CC>
         <CC t={t} style={{marginBottom:14}}>
@@ -838,10 +856,18 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
           <TA value={note} onChange={e=>setNote(e.target.value)} placeholder="Leave a note…"/>
           {note.trim()&&<button onClick={()=>{save({notes:(task.notes?task.notes+"\n":"")+note});setNote("");}} style={{marginTop:8,width:"100%",padding:"10px",background:t.accent,border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Save Note</button>}
         </CC>
-        <button onClick={()=>save({status:"done"})} style={{width:"100%",padding:"15px",background:task.status==="done"?"#22c55e22":t.accent,border:`2px solid ${task.status==="done"?"#22c55e":t.accent}`,borderRadius:14,color:task.status==="done"?"#22c55e":"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          <Ic d={P.ok} s={18} c={task.status==="done"?"#22c55e":"#000"} sw={2.5}/>
-          {task.status==="done"?"✓ Completed":"Mark as Complete"}
-        </button>
+        {/* Photo required before completing */}
+        {photos.length===0&&task.status!=="done"?(
+          <button onClick={()=>setShowCam(true)} style={{width:"100%",padding:"15px",background:"#ef444422",border:"2px solid #ef444466",borderRadius:14,color:"#ef4444",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <Ic d={P.cam} s={18} c="#ef4444"/>
+            Take Photo to Complete
+          </button>
+        ):(
+          <button onClick={()=>save({status:"done"})} style={{width:"100%",padding:"15px",background:task.status==="done"?"#22c55e22":t.accent,border:`2px solid ${task.status==="done"?"#22c55e":t.accent}`,borderRadius:14,color:task.status==="done"?"#22c55e":"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <Ic d={P.ok} s={18} c={task.status==="done"?"#22c55e":"#000"} sw={2.5}/>
+            {task.status==="done"?"✓ Completed":"Mark as Complete"}
+          </button>
+        )}
       </div>}
     </div>
   );
