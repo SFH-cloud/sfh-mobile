@@ -720,6 +720,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   const [showStartCam,setShowStartCam]=useState(false);
   const [startLoc,setStartLoc]=useState(location?.name||"");
   const [startPhoto,setStartPhoto]=useState(null);
+  // Track if a NEW correction photo was taken (separate from start photo)
+  const [correctionPhotoDone,setCorrectionPhotoDone]=useState(false);
   // "started" = user confirmed location + pressed Start Work
   const [started,setStarted]=useState(init.status==="in_progress"||init.status==="done");
 
@@ -735,6 +737,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   const handleCapture=dataUrl=>{
     const p=[...photos,{id:uid(),dataUrl,time:tf()}];
     setPhotos(p);
+    if(hasReturnNote) setCorrectionPhotoDone(true);
     setTask(prev=>{
       const updated={...prev,photos:p};
       onSave(updated);
@@ -848,7 +851,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           {["pending","in_progress","done"].map(s=>{
             const a=task.status===s,c=SC[s];
-            const blocked=s==="done"&&photos.length===0&&task.status!=="done";
+            const blocked=s==="done"&&(hasReturnNote?!correctionPhotoDone:photos.length===0)&&task.status!=="done";
             return(
               <button key={s} onClick={()=>!blocked&&save({status:s})}
                 title={blocked?"Take a photo first":""}
@@ -923,11 +926,13 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
   setNote("");
 }} style={{marginTop:8,width:"100%",padding:"10px",background:t.accent,border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Save Note</button>}
         </CC>
-        {/* Photo required before completing */}
-        {photos.length===0&&task.status!=="done"?(
+        {/* Photo required before completing.
+            For normal tasks: need at least one photo.
+            For return tasks: need a NEW correction photo (correctionPhotoDone). */}
+        {(hasReturnNote ? !correctionPhotoDone : photos.length===0)&&task.status!=="done"?(
           <button onClick={()=>setShowCam(true)} style={{width:"100%",padding:"15px",background:"#ef444422",border:"2px solid #ef444466",borderRadius:14,color:"#ef4444",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <Ic d={P.cam} s={18} c="#ef4444"/>
-            Take Photo to Complete
+            {hasReturnNote?"📷 Take Correction Photo First":"Take Photo to Complete"}
           </button>
         ):(
           <button onClick={()=>{
