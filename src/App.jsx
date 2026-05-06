@@ -671,15 +671,15 @@ function TaskCard({task,t,onClick}){
     <div onClick={onClick} style={{background:hasIssue?"#1a0808":t.card,border:`1px solid ${hasIssue?"#ef444466":t.border}`,borderRadius:14,padding:"13px 14px",marginBottom:8,cursor:"pointer",position:"relative",overflow:"hidden"}}>
       {/* Left accent bar — red for issues */}
       <div style={{position:"absolute",left:0,top:0,bottom:0,width:hasIssue?5:3,background:hasIssue?"#ef4444":pc,borderRadius:"14px 0 0 14px"}}/>
-      {/* Issue banner at top */}
+      {/* Issue banner — full-width red bar */}
       {hasIssue&&(
-        <div style={{marginLeft:8,marginBottom:8,background:"#ef444422",border:"1px solid #ef444455",borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:6}}>
-          <span style={{fontSize:14}}>⚠️</span>
-          <div style={{flex:1}}>
-            <div style={{fontSize:11,color:"#ef4444",fontWeight:800}}>Management feedback — correction required</div>
-            <div style={{fontSize:10,color:"#ef444488",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.inspectionNote?.split("
-")[1]||"Tap to see details"}</div>
+        <div style={{margin:"0 0 10px -13px",width:"calc(100% + 26px)",background:"#ef4444",padding:"8px 16px",display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:18,flexShrink:0}}>⚠️</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12,color:"#fff",fontWeight:900,letterSpacing:.3}}>CORRECTION REQUIRED</div>
+            <div style={{fontSize:10,color:"#ffffff99",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Management feedback — tap to view</div>
           </div>
+          <div style={{background:"#ffffff22",borderRadius:6,padding:"3px 8px",fontSize:10,color:"#fff",fontWeight:700,flexShrink:0}}>TAP ›</div>
         </div>
       )}
       <div style={{marginLeft:8}}>
@@ -1270,6 +1270,28 @@ export default function App(){
           <Av name={user.name} size={28} color={t.accent}/>
         </div>
       </div>
+
+      {/* ── GLOBAL INSPECTION FEEDBACK BANNER ─────────────────────────
+           Shown below header whenever user has tasks sent back for correction */}
+      {(()=>{
+        const returnTasks=tasks.filter(x=>x.assigneeId===user.id&&x.inspectionNote&&x.status!=="done");
+        if(!returnTasks.length)return null;
+        return(
+          <div style={{background:"#ef4444",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}
+            onClick={()=>{setTab("tasks");setNav({screen:"tasks",data:null});}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:"#ffffff22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>⚠️</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:"#fff",fontWeight:900}}>
+                {returnTasks.length === 1
+                  ? "1 task returned for correction"
+                  : `${returnTasks.length} tasks returned for correction`}
+              </div>
+              <div style={{fontSize:10,color:"#ffffff88",marginTop:1}}>Management feedback requires your attention — tap to view</div>
+            </div>
+            <div style={{fontSize:18,color:"#fff"}}>›</div>
+          </div>
+        );
+      })()}
 
       {/* NFC check-in modal */}
       {showCheckin&&<NfcCheckinModal user={user} t={t} onCheckin={handleCheckin} onClose={()=>setShowCheckin(false)}/>}
