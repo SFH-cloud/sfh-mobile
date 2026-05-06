@@ -709,7 +709,7 @@ function TaskCard({task,t,onClick}){
   );
 }
 
-function TaskDetail({task:init,user,t,onBack,onSave,location}){
+function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onClearLocation}){
   const [task,setTask]=useState({...init,checklist:init.checklist||[]});
   const [note,setNote]=useState("");
   // If task has inspectionNote (sent back), require a NEW photo — don't accept old ones
@@ -770,35 +770,27 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
     const startPhotos=[{id:uid(),dataUrl:startPhoto,time:tf(),type:"start"},...(hasReturnNote?[]:init.photos||[])];
     setPhotos(startPhotos);
     save({status:"in_progress",startLocation:startLoc,photos:startPhotos});
-    // Compress photo to thumbnail before sending to live location (saves bandwidth)
-    const compressPhoto=async(dataUrl,maxW=480)=>{
-      return new Promise(resolve=>{
+    // Update location state so dashboard reflects it immediately
+    const locObj={name:startLoc,time:tf(),date:tod()};
+    if(onSetLocation) onSetLocation(locObj);
+    // Push to Supabase as live location (with compressed photo)
+    if(user){
+      const compressPhoto=async(dataUrl,maxW=480)=>new Promise(resolve=>{
         const img=new Image();
         img.onload=()=>{
-          const scale=Math.min(1,maxW/img.width);
+          const s=Math.min(1,maxW/img.width);
           const c=document.createElement("canvas");
-          c.width=img.width*scale;c.height=img.height*scale;
+          c.width=img.width*s;c.height=img.height*s;
           c.getContext("2d").drawImage(img,0,0,c.width,c.height);
           resolve(c.toDataURL("image/jpeg",0.6));
         };
         img.src=dataUrl;
       });
-    };
-    // Push live location WITH compressed photo to Supabase
-    if(user){
       const thumb=await compressPhoto(startPhoto);
-      await stor.set(SK.locPrefix+user.id,{
-        location:startLoc,
-        name:startLoc,
-        time:tf(),
-        date:tod(),
-        userId:user.id,
-        userName:user.name,
-        role:user.role,
-        photo:thumb,
-        taskId:init.id,
-        taskTitle:init.roundId&&init.location?init.location:init.title,
-      });
+      const locRecord={...locObj,userId:user.id,userName:user.name,role:user.role,
+        photo:thumb,taskId:init.id,
+        taskTitle:init.roundId&&init.location?init.location:init.title};
+      await stor.set(SK.locPrefix+user.id,locRecord);
     }
   };
 
@@ -984,6 +976,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
             if(task.status!=="done"){
               // Clear live location when task is completed
               if(user) await stor.del(SK.locPrefix+user.id);
+              if(onClearLocation) onClearLocation();
               // If this was a returned task, archive the inspectionNote into history
               const resubmitEntry = task.inspectionNote ? {
                 date: new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}),
@@ -1342,7 +1335,13 @@ export default function App(){
   const addOrder=async o=>{const n=[...orders,o];await stor.set(SK.orders,n);setOrders(n);};
   const addInspection=async i=>{const n=[...inspections,i];await stor.set(SK.inspections,n);setInspections(n);};
 
-  const login=async u=>{setUser(u);await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role,nfc:u.nfc});};
+  const login=async u=>{
+    // Clear any previous location on new login — ensures only one active location
+    await stor.del(SK.locPrefix+u.id);
+    setLocation(null);
+    setUser(u);
+    await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role,nfc:u.nfc});
+  };
   const logout=async()=>{
     if(user)await stor.del(SK.locPrefix+user.id);
     setUser(null);setLocation(null);await stor.set(SK.cu,null);
@@ -1424,7 +1423,7 @@ export default function App(){
         const isLocked = needsNfc && !hasLocation && lockedScreens.includes(tab) && screen !== "taskDetail";
 
         if(screen==="taskDetail")
-          return <TaskDetail task={tasks.find(x=>x.id===nav.data?.id)||nav.data} user={user} t={t} location={location} onBack={()=>go("tasks")} onSave={u=>saveTasks(tasks.map(x=>x.id===u.id?u:x))}/>;
+          return <TaskDetail task={tasks.find(x=>x.id===nav.data?.id)||nav.data} user={user} t={t} location={location} onBack={()=>go("tasks")} onSave={u=>saveTasks(tasks.map(x=>x.id===u.id?u:x))} onSetLocation={loc=>{setLocation(loc);}} onClearLocation={()=>{setLocation(null);stor.del(SK.locPrefix+user?.id);}}/>;
         if(isLocked)
           return <NfcLockScreen t={t} onCheckin={()=>setShowCheckin(true)}/>;
         if(tab==="dashboard")
