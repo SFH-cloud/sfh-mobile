@@ -754,8 +754,23 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
     const startPhotos=[{id:uid(),dataUrl:startPhoto,time:tf(),type:"start"},...(hasReturnNote?[]:init.photos||[])];
     setPhotos(startPhotos);
     save({status:"in_progress",startLocation:startLoc,photos:startPhotos});
-    // Push live location WITH start photo to Supabase — visible in admin Live Locations
+    // Compress photo to thumbnail before sending to live location (saves bandwidth)
+    const compressPhoto=async(dataUrl,maxW=480)=>{
+      return new Promise(resolve=>{
+        const img=new Image();
+        img.onload=()=>{
+          const scale=Math.min(1,maxW/img.width);
+          const c=document.createElement("canvas");
+          c.width=img.width*scale;c.height=img.height*scale;
+          c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+          resolve(c.toDataURL("image/jpeg",0.6));
+        };
+        img.src=dataUrl;
+      });
+    };
+    // Push live location WITH compressed photo to Supabase
     if(user){
+      const thumb=await compressPhoto(startPhoto);
       await stor.set(SK.locPrefix+user.id,{
         location:startLoc,
         name:startLoc,
@@ -764,7 +779,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location}){
         userId:user.id,
         userName:user.name,
         role:user.role,
-        photo:startPhoto,          // start photo shown in admin live locations
+        photo:thumb,
         taskId:init.id,
         taskTitle:init.roundId&&init.location?init.location:init.title,
       });
