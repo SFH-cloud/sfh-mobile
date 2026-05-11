@@ -4,32 +4,28 @@ import { useState, useEffect, useCallback, useRef } from "react";
 // DATA
 // ═══════════════════════════════════════════════════════════
 const USER_DB = [
-  {id:"u2", name:"Frantisek Kabilka",        role:"management", pin:"38516", nfc:"NFC-MGT-002"},
-  {id:"u3", name:"Camila Dalcin",            role:"management", pin:"92047", nfc:"NFC-MGT-003"},
-  {id:"u4", name:"Munish Soni",              role:"reception",  pin:"61385", nfc:"NFC-REC-001"},
-  {id:"u5", name:"Ramneek Kaur",             role:"reception",  pin:"29734", nfc:"NFC-REC-002"},
-  {id:"u6", name:"Sajin Abraham",            role:"reception",  pin:"85162", nfc:"NFC-REC-003"},
-  {id:"u7", name:"Simbarashe Manyati",       role:"porter",     pin:"43809", nfc:"NFC-PRT-001"},
-  {id:"u8", name:"Cristiano Melo",           role:"porter",     pin:"17653", nfc:"NFC-PRT-002"},
-  {id:"u9", name:"Joanna Rejak",             role:"cleaner",    pin:"56420", nfc:"NFC-CLN-001"},
-  {id:"u10",name:"Hilario Ximenes",          role:"cleaner",    pin:"30978", nfc:"NFC-CLN-002"},
-  {id:"u11",name:"Antonio Felisbino",        role:"cleaner",    pin:"84215", nfc:"NFC-CLN-003"},
-  {id:"u12",name:"Danielli Sanches Magrini", role:"cleaner",    pin:"67043", nfc:"NFC-CLN-004"},
-  {id:"u13",name:"Leandro Morilla",          role:"cleaner",    pin:"19862", nfc:"NFC-CLN-005"},
-  {id:"u14",name:"Khrystyna Kolodii",        role:"cleaner",    pin:"52307", nfc:"NFC-CLN-006"},
-  {id:"u15",name:"Amandeep Singh",           role:"cleaner",    pin:"73614", nfc:"NFC-CLN-007"},
+  {id:"u2", name:"Frantisek Kabilka",        role:"management", pin:"38516"},
+  {id:"u3", name:"Camila Dalcin",            role:"management", pin:"92047"},
+  {id:"u4", name:"Munish Soni",              role:"reception",  pin:"61385"},
+  {id:"u5", name:"Ramneek Kaur",             role:"reception",  pin:"29734"},
+  {id:"u6", name:"Sajin Abraham",            role:"reception",  pin:"85162"},
+  {id:"u7", name:"Simbarashe Manyati",       role:"porter",     pin:"43809"},
+  {id:"u8", name:"Cristiano Melo",           role:"porter",     pin:"17653"},
+  {id:"u9", name:"Joanna Rejak",             role:"cleaner",    pin:"56420"},
+  {id:"u10",name:"Hilario Ximenes",          role:"cleaner",    pin:"30978"},
+  {id:"u11",name:"Antonio Felisbino",        role:"cleaner",    pin:"84215"},
+  {id:"u12",name:"Danielli Sanches Magrini", role:"cleaner",    pin:"67043"},
+  {id:"u13",name:"Leandro Morilla",          role:"cleaner",    pin:"19862"},
+  {id:"u14",name:"Khrystyna Kolodii",        role:"cleaner",    pin:"52307"},
+  {id:"u15",name:"Amandeep Singh",           role:"cleaner",    pin:"73614"},
 ];
 
-const NFC_LOCATION_TAGS = {
-  "NFC-LOC-WRK":"Workshop","NFC-LOC-FLW":"Flowers","NFC-LOC-SHM":"Soho Home",
-  "NFC-LOC-GYM":"Gym","NFC-LOC-SAU":"Sauna & Steam Room","NFC-LOC-BOT":"Boathouse",
-  "NFC-LOC-PEN":"Pen Yen","NFC-LOC-HAY":"Hay Barn","NFC-LOC-BAR":"Barwell",
-  "NFC-LOC-CAN":"Canteen","NFC-LOC-MBN":"Main Barn","NFC-LOC-MIL":"Mill + Toilets",
-  "NFC-LOC-GLS":"Glasshouse","NFC-LOC-CIN":"Cinema","NFC-LOC-CAO":"Canteen Office",
-  "NFC-LOC-CHK":"Check-out House","NFC-LOC-GAT":"Gate House",
-  "NFC-LOC-CLB":"Club Reception + Office","NFC-LOC-BRJ":"Berenjak","NFC-LOC-BLK":"Blake's",
-};
-const LOCATIONS = Object.values(NFC_LOCATION_TAGS).sort((a,b)=>a.localeCompare(b));
+const LOCATIONS = [
+  "Barwell","Berenjak","Blake's","Boathouse","Canteen","Canteen Office",
+  "Check-out House","Cinema","Club Reception + Office","Flowers","Gate House",
+  "Glasshouse","Gym","Hay Barn","Main Barn","Mill + Toilets",
+  "Pen Yen","Sauna & Steam Room","Soho Home","Workshop",
+];
 
 const PORTER_TEMPLATES = {
   "Float Check":["Is the Float charged?","Is the float clean?","Brakes & Handbrake","Mirrors","Tires","Lights","Step Function","Check For Damage","Photo uploaded"],
@@ -148,7 +144,7 @@ const P={
   user:"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
   back:"M15 19l-7-7 7-7",
   cam:"M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8",
-  nfc:"M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0",
+
   tool:"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0",
   logout:"M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
   cart:"M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z",
@@ -337,7 +333,7 @@ function CheckoutPhotoModal({location,user,t,onComplete,onCancel}){
           {!photo?(
             <button onClick={()=>setShowCam(true)} style={{width:"100%",height:180,background:t.card,border:`2px dashed ${t.accent}55`,borderRadius:16,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,marginBottom:14}}>
               <Ic d={P.cam} s={36} c={t.accent}/>
-              <div style={{color:t.accent,fontWeight:700,fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Tap to open camera</div>
+              <div style={{color:t.accent,fontWeight:700,fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Take checkout photo</div>
               <div style={{color:t.sub,fontSize:11}}>Live photo only — no gallery access</div>
             </button>
           ):(
@@ -374,156 +370,40 @@ function CheckoutPhotoModal({location,user,t,onComplete,onCancel}){
 }
 
 // ═══════════════════════════════════════════════════════════
-// NFC LOCATION MODAL — check-in (no checkout here)
 // ═══════════════════════════════════════════════════════════
-function NfcCheckinModal({user,t,onCheckin,onClose}){
-  const [tapped,setTapped]   = useState("");
-  const [scanning,setScanning] = useState(false);
-  const [nfcStatus,setNfcStatus] = useState("idle"); // idle | scanning | success | error | unsupported
-  const [errorMsg,setErrorMsg] = useState("");
-  const readerRef = useRef(null);
+// LOCATION SELECT MODAL — manual location selection
+// ═══════════════════════════════════════════════════════════
+function LocationSelectModal({user,t,onCheckin,onClose}){
+  const [tapped,setTapped] = useState("");
+  const [search,setSearch] = useState("");
 
-  // ── Android Web NFC ────────────────────────────────────────
-  const startNfcScan = async () => {
-    if(!("NDEFReader" in window)){
-      setNfcStatus("unsupported"); // iPhone — show manual list
-      return;
-    }
-    try {
-      setScanning(true);
-      setNfcStatus("scanning");
-      const reader = new window.NDEFReader();
-      readerRef.current = reader;
-      await reader.scan();
-      reader.onreading = ({message}) => {
-        for(const record of message.records){
-          if(record.recordType === "url"){
-            const decoder = new TextDecoder();
-            const url = decoder.decode(record.data);
-            // Extract ?nfc=NFC-LOC-XXX from URL
-            try {
-              const params = new URL(url).searchParams;
-              const code = params.get("nfc");
-              if(code && NFC_LOCATION_TAGS[code]){
-                const locName = NFC_LOCATION_TAGS[code];
-                setNfcStatus("success");
-                setTapped(locName);
-                setTimeout(()=>{ onCheckin(locName); onClose(); }, 600);
-                return;
-              }
-            } catch {}
-            // Fallback: try raw code match
-            const match = Object.keys(NFC_LOCATION_TAGS).find(k => url.includes(k));
-            if(match){
-              const locName = NFC_LOCATION_TAGS[match];
-              setNfcStatus("success");
-              setTapped(locName);
-              setTimeout(()=>{ onCheckin(locName); onClose(); }, 600);
-              return;
-            }
-          }
-        }
-        setErrorMsg("Tag not recognised. Make sure you are tapping the correct tag.");
-        setNfcStatus("error");
-      };
-      reader.onerror = () => {
-        setErrorMsg("Could not read NFC tag. Try again.");
-        setNfcStatus("error");
-        setScanning(false);
-      };
-    } catch(e) {
-      if(e.name === "NotAllowedError"){
-        setErrorMsg("NFC permission denied. Please allow NFC access.");
-      } else {
-        setErrorMsg("NFC not available: " + e.message);
-      }
-      setNfcStatus("error");
-      setScanning(false);
-    }
-  };
-
-  // Stop scan on unmount
-  useEffect(()=>{
-    // Auto-start NFC scan on Android, show list on iPhone
-    if("NDEFReader" in window){
-      startNfcScan();
-    } else {
-      setNfcStatus("unsupported");
-    }
-    return ()=>{
-      // NDEFReader has no stop() — it stops when component unmounts
-    };
-  },[]);
+  const filtered = LOCATIONS.filter(l => l.toLowerCase().includes(search.toLowerCase()));
 
   const tap = locName => {
     setTapped(locName);
-    setTimeout(()=>{ onCheckin(locName); onClose(); }, 400);
+    setTimeout(()=>{ onCheckin(locName); onClose(); }, 300);
   };
 
-  // ── SCANNING STATE (Android) ──
-  if(nfcStatus === "scanning") return(
-    <Modal title="Hold Phone to NFC Tag" t={t} onClose={onClose}>
-      <div style={{textAlign:"center",padding:"32px 0"}}>
-        <div style={{fontSize:72,marginBottom:16,animation:"pulse 1.5s ease-in-out infinite"}}>📡</div>
-        <div style={{fontSize:16,fontWeight:700,color:t.text,marginBottom:8}}>Ready to scan</div>
-        <div style={{fontSize:13,color:t.sub,lineHeight:1.6}}>
-          Hold the back of your phone<br/>against the NFC tag on the wall
-        </div>
-        <div style={{marginTop:24,padding:"12px 16px",background:`${t.accent}15`,border:`1px solid ${t.accent}33`,borderRadius:12}}>
-          <div style={{fontSize:11,color:t.accent}}>📱 Keep your phone still until it vibrates</div>
-        </div>
-        <button onClick={()=>setNfcStatus("unsupported")} style={{marginTop:20,background:"transparent",border:"none",color:t.sub,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>
-          Select location manually instead
-        </button>
-      </div>
-      <style>{`@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.08)}}`}</style>
-    </Modal>
-  );
-
-  // ── SUCCESS STATE ──
-  if(nfcStatus === "success") return(
-    <Modal title="Location Set" t={t} onClose={onClose}>
-      <div style={{textAlign:"center",padding:"32px 0"}}>
-        <div style={{fontSize:64,marginBottom:16}}>✅</div>
-        <div style={{fontSize:18,fontWeight:800,color:t.accent,fontFamily:"'DM Serif Display',serif"}}>{tapped}</div>
-        <div style={{fontSize:13,color:t.sub,marginTop:8}}>Checking you in…</div>
-      </div>
-    </Modal>
-  );
-
-  // ── ERROR STATE ──
-  if(nfcStatus === "error") return(
-    <Modal title="NFC Error" t={t} onClose={onClose}>
-      <div style={{textAlign:"center",padding:"16px 0 8px"}}>
-        <div style={{fontSize:48,marginBottom:12}}>⚠️</div>
-        <div style={{fontSize:13,color:"#ef4444",marginBottom:20,lineHeight:1.5}}>{errorMsg}</div>
-        <button onClick={startNfcScan} style={{padding:"12px 24px",background:t.accent,border:"none",borderRadius:12,color:"#000",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginBottom:12}}>
-          Try Again
-        </button>
-        <div><button onClick={()=>setNfcStatus("unsupported")} style={{background:"transparent",border:"none",color:t.sub,fontSize:12,cursor:"pointer",textDecoration:"underline",fontFamily:"'DM Sans',sans-serif"}}>Select manually</button></div>
-      </div>
-    </Modal>
-  );
-
-  // ── MANUAL LIST (iPhone + fallback) ──
   return(
     <Modal title="Select Your Location" t={t} onClose={onClose}>
-      <div style={{marginBottom:14}}>
-        {"NDEFReader" in window
-          ? <div style={{padding:"8px 12px",background:`${t.accent}15`,border:`1px solid ${t.accent}33`,borderRadius:10,fontSize:11,color:t.accent,marginBottom:12,textAlign:"center"}}>
-              📡 <button onClick={startNfcScan} style={{background:"transparent",border:"none",color:t.accent,cursor:"pointer",fontSize:11,fontWeight:700,textDecoration:"underline",fontFamily:"'DM Sans',sans-serif"}}>Tap to scan NFC tag</button> or select below
-            </div>
-          : <div style={{padding:"8px 12px",background:"#ffffff08",border:`1px solid ${t.border}`,borderRadius:10,fontSize:11,color:t.sub,marginBottom:12,textAlign:"center"}}>
-              iPhone: tap your NFC tag to auto-confirm, or select below
-            </div>
-        }
+      <div style={{marginBottom:12}}>
+        <Inp value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search location…"/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,maxHeight:360,overflowY:"auto"}}>
-        {LOCATIONS.map(locName=>(
-          <button key={locName} onClick={()=>tap(locName)} style={{padding:"10px 8px",background:tapped===locName?`${t.accent}25`:t.card,border:`1px solid ${tapped===locName?t.accent:t.border}`,borderRadius:10,cursor:"pointer",color:tapped===locName?t.accent:t.text,fontSize:12,fontWeight:tapped===locName?700:500,fontFamily:"'DM Sans',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:14}}>📡</span>{locName}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,maxHeight:380,overflowY:"auto"}}>
+        {filtered.map(locName=>(
+          <button key={locName} onClick={()=>tap(locName)}
+            style={{padding:"10px 8px",
+              background:tapped===locName?`${t.accent}25`:t.card,
+              border:`1px solid ${tapped===locName?t.accent:t.border}`,
+              borderRadius:10,cursor:"pointer",
+              color:tapped===locName?t.accent:t.text,
+              fontSize:12,fontWeight:tapped===locName?700:500,
+              fontFamily:"'DM Sans',sans-serif",textAlign:"left",
+              display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:14}}>📍</span>{locName}
           </button>
         ))}
+        {filtered.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",color:t.sub,padding:"24px 0",fontSize:13}}>No locations found</div>}
       </div>
     </Modal>
   );
@@ -536,21 +416,21 @@ function LocationBar({location,t,onCheckin,onCheckout}){
   return(
     <div style={{marginBottom:14}}>
       {!location?(
-        <button onClick={onCheckin} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"#ffffff08",border:`1px solid ${t.border}`,borderRadius:12,padding:"10px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-          <Ic d={P.nfc} s={17} c={t.sub}/>
+        <button onClick={onCheckin} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"#ffffff08",border:`2px dashed ${t.border}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+          <span style={{fontSize:20}}>📍</span>
           <div style={{flex:1,textAlign:"left"}}>
-            <div style={{fontSize:13,fontWeight:700,color:t.sub}}>No location set</div>
-            <div style={{fontSize:10,color:"#444",marginTop:1}}>Tap to check in via NFC</div>
+            <div style={{fontSize:13,fontWeight:700,color:t.sub}}>Select your location</div>
+            <div style={{fontSize:10,color:"#444",marginTop:1}}>Required before starting work</div>
           </div>
-          <span style={{color:t.sub,fontSize:18}}>›</span>
+          <span style={{color:t.accent,fontSize:18}}>›</span>
         </button>
       ):(
         <div style={{background:`${t.accent}18`,border:`1px solid ${t.accent}44`,borderRadius:12,padding:"10px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <Ic d={P.nfc} s={17} c={t.accent}/>
+            <span style={{fontSize:20}}>📍</span>
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700,color:t.accent}}>{location.name}</div>
-              <div style={{fontSize:10,color:t.sub,marginTop:1}}>Since {location.time} · tap below to leave</div>
+              <div style={{fontSize:10,color:t.sub,marginTop:1}}>Since {location.time} · complete checkout before leaving</div>
             </div>
             <div style={{width:8,height:8,borderRadius:"50%",background:"#22c55e"}}/>
           </div>
@@ -1121,25 +1001,21 @@ function InspectionsScreen({user,t,inspections,onAdd}){
 // NFC LOCK SCREEN — shown when no location is set
 // Management role bypasses this
 // ═══════════════════════════════════════════════════════════
-function NfcLockScreen({t, onCheckin}){
+function LocationLockScreen({t, onCheckin}){
   return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",padding:"32px 24px",textAlign:"center"}}>
       <div style={{width:96,height:96,borderRadius:"50%",background:`${t.accent}18`,border:`2px solid ${t.accent}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:44,marginBottom:24}}>
-        📡
+        📍
       </div>
       <div style={{fontSize:22,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:8}}>
-        Tap your NFC Tag first
+        Select your location first
       </div>
       <div style={{fontSize:14,color:t.sub,lineHeight:1.6,maxWidth:280,marginBottom:32}}>
-        You must check in to a location before you can view tasks or submit requests.
-        Tap the NFC tag at your work area to continue.
+        You must select your work location before you can submit requests or reports.
       </div>
       <button onClick={onCheckin} style={{padding:"14px 28px",background:t.accent,border:"none",borderRadius:14,color:"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:20}}>📡</span> Select Location Manually
+        <span style={{fontSize:20}}>📍</span> Select Location
       </button>
-      <div style={{marginTop:16,fontSize:11,color:t.sub}}>
-        Or tap a physical NFC tag to auto-check in
-      </div>
     </div>
   );
 }
@@ -1250,7 +1126,7 @@ function ProfileScreen({user,tasks,location,t,onLogout}){
         {[
           ["Data collected","Your name and work activity only"],
           ["Photos","Location checkout photos — not personal"],
-          ["Location","Work premises only, cleared on logout"],
+          ["Location","Selected by staff, cleared on logout"],
           ["Retention","Tasks: 12 months · Photos: 90 days"],
           ["Legal basis","Employer legitimate interest (UK GDPR)"],
           ["Your rights","Contact Soho House HR for data requests"],
@@ -1337,21 +1213,7 @@ export default function App(){
     return()=>clearInterval(iv);
   },[loadData]);
 
-  // ── NFC TAG AUTO-DETECTION ───────────────────────────────────────────────
-  // When staff taps a physical NFC tag, iPhone opens:
-  // https://sfh-mobile.vercel.app/?nfc=NFC-LOC-GYM
-  // We read the ?nfc= param and auto-set the location
-  useEffect(()=>{
-    if(!user) return; // wait until logged in
-    const params = new URLSearchParams(window.location.search);
-    const nfcCode = params.get("nfc");
-    if(nfcCode && NFC_LOCATION_TAGS[nfcCode]){
-      const locName = NFC_LOCATION_TAGS[nfcCode];
-      handleCheckin(locName);
-      // Clean URL so refresh doesn't re-trigger
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  },[user]); // re-run when user logs in (tag may have been tapped before login)
+  // Location selection is manual — no NFC URL param detection needed
 
   const saveTasks=async t=>{await stor.set(SK.tasks,t);setTasks(t);};
   const addRepair=async r=>{const n=[...repairs,r];await stor.set(SK.repairs,n);setRepairs(n);};
@@ -1391,7 +1253,7 @@ export default function App(){
     await stor.del(SK.locPrefix+u.id);
     setLocation(null);
     setUser(u);
-    await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role,nfc:u.nfc});
+    await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role});
     // Subscribe to push notifications
     subscribeToPush(u.id);
   };
@@ -1461,24 +1323,23 @@ export default function App(){
       })()}
 
       {/* NFC check-in modal */}
-      {showCheckin&&<NfcCheckinModal user={user} t={t} onCheckin={handleCheckin} onClose={()=>setShowCheckin(false)}/>}
+      {showCheckin&&<LocationSelectModal user={user} t={t} onCheckin={handleCheckin} onClose={()=>setShowCheckin(false)}/>}
 
       {/* Checkout photo modal */}
       {showCheckout&&<CheckoutPhotoModal location={location?.name||""} user={user} t={t} onComplete={handleCheckoutComplete} onCancel={()=>setShowCheckout(false)}/>}
 
       {(()=>{
         // Management can access everything without NFC check-in
-        const needsNfc = user.role !== "management";
         const hasLocation = !!location;
-        // Tasks tab is always accessible — NFC is enforced per-task when starting work
-        // Repairs, orders, inspections still require location check-in
+        // Tasks tab always accessible — location enforced per-task on Start Work
+        // Repairs, orders, inspections require location selection first
         const lockedScreens = ["repairs","orders","inspections"];
-        const isLocked = needsNfc && !hasLocation && lockedScreens.includes(tab) && screen !== "taskDetail";
+        const isLocked = user.role !== "management" && !hasLocation && lockedScreens.includes(tab) && screen !== "taskDetail";
 
         if(screen==="taskDetail")
           return <TaskDetail task={tasks.find(x=>x.id===nav.data?.id)||nav.data} user={user} t={t} location={location} onBack={()=>go("tasks")} onSave={u=>saveTasks(tasks.map(x=>x.id===u.id?u:x))} onSetLocation={loc=>{setLocation(loc);}} onClearLocation={()=>{setLocation(null);stor.del(SK.locPrefix+user?.id);}}/>;
         if(isLocked)
-          return <NfcLockScreen t={t} onCheckin={()=>setShowCheckin(true)}/>;
+          return <LocationLockScreen t={t} onCheckin={()=>setShowCheckin(true)}/>;
         if(tab==="dashboard")
           return <Dashboard user={user} tasks={tasks} location={location} t={t} onNav={go} onCheckin={()=>setShowCheckin(true)} onCheckout={()=>setShowCheckout(true)}/>;
         if(tab==="tasks")
