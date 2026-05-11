@@ -1261,7 +1261,7 @@ function ProfileScreen({user,tasks,location,t,onLogout}){
           </div>
         ))}
         <div style={{marginTop:8,fontSize:10,color:t.sub,textAlign:"center"}}>
-          Soho House Operations Platform · Data stored in EU (Stockholm)
+          Soho House Operations Platform · Data stored in AWS eu-north-1 (Stockholm, Sweden)
         </div>
       </div>
     </div>
