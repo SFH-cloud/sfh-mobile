@@ -81,10 +81,10 @@ const _h = {
 const stor = {
   get: async (k) => {
     try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/sfh_data?key=eq.${encodeURIComponent(k)}&select=value`,
-        { headers: _h }
-      );
+      // Use encodeURIComponent but Supabase needs key in the filter value
+      // Pass key as query param with proper encoding
+      const url = SUPABASE_URL+"/rest/v1/sfh_data?select=value&key=eq."+encodeURIComponent(k);
+      const res = await fetch(url, { headers: _h });
       const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) return null;
       return data[0].value;
@@ -1287,9 +1287,13 @@ export default function App(){
       const cu=await stor.get(SK.cu);
       if(cu){
         setUser(cu);
-        // restore location
+        // Always restore location from Supabase for this user
         const loc=await stor.get(SK.locPrefix+cu.id);
-        if(loc)setLocation(loc);
+        if(loc&&loc.name){
+          setLocation(loc);
+        } else {
+          setLocation(null);
+        }
       }
       setLoading(false);
     })();
@@ -1342,19 +1346,21 @@ export default function App(){
   };
 
   const login=async u=>{
-    // Only clear location if a DIFFERENT user is logging in
-    // Same user re-logging keeps their active location
+    // If a DIFFERENT user was logged in, clear their location
     const currentCu=await stor.get(SK.cu);
     if(currentCu && currentCu.id !== u.id){
-      // Different user — clear previous user's location
       await stor.del(SK.locPrefix+currentCu.id);
     }
-    setUser(u);
+    // Save new user session
     await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role});
-    // Restore location for this user
+    setUser(u);
+    // Always restore location fresh from Supabase for this user
     const existingLoc=await stor.get(SK.locPrefix+u.id);
-    if(existingLoc) setLocation(existingLoc);
-    else setLocation(null);
+    if(existingLoc && existingLoc.name){
+      setLocation(existingLoc);
+    } else {
+      setLocation(null);
+    }
     // Subscribe to push notifications
     subscribeToPush(u.id);
     // Show transparency notice on first use of this device
@@ -1368,11 +1374,22 @@ export default function App(){
     setUser(null);setLocation(null);await stor.set(SK.cu,null);
   };
 
-  // Check in to location
+  // Check in to location — saves full record to Supabase
   const handleCheckin=async locName=>{
     const loc={name:locName,time:tf(),date:tod()};
     setLocation(loc);
-    if(user) await stor.set(SK.locPrefix+user.id,{...loc,location:locName,userId:user.id,userName:user.name,role:user.role});
+    if(user){
+      const locRecord={
+        name:locName,
+        location:locName,  // redundant but keeps admin panel happy
+        time:tf(),
+        date:tod(),
+        userId:user.id,
+        userName:user.name,
+        role:user.role,
+      };
+      await stor.set(SK.locPrefix+user.id, locRecord);
+    }
   };
 
   // Checkout — after photo confirmed
@@ -1449,7 +1466,13 @@ export default function App(){
         const isLocked = user.role !== "management" && !hasLocation && lockedScreens.includes(tab) && screen !== "taskDetail";
 
         if(screen==="taskDetail")
-          return <TaskDetail task={tasks.find(x=>x.id===nav.data?.id)||nav.data} user={user} t={t} location={location} onBack={()=>go("tasks")} onSave={u=>saveTasks(tasks.map(x=>x.id===u.id?u:x))} onSetLocation={loc=>{setLocation(loc);}} onClearLocation={()=>{setLocation(null);stor.del(SK.locPrefix+user?.id);}}/>;
+          return <TaskDetail task={tasks.find(x=>x.id===nav.data?.id)||nav.data} user={user} t={t} location={location} onBack={()=>go("tasks")} onSave={u=>saveTasks(tasks.map(x=>x.id===u.id?u:x))} onSetLocation={async loc=>{
+            setLocation(loc);
+            if(user){
+              const locRecord={...loc,location:loc.name,userId:user.id,userName:user.name,role:user.role};
+              await stor.set(SK.locPrefix+user.id,locRecord);
+            }
+          }} onClearLocation={()=>{setLocation(null);stor.del(SK.locPrefix+user?.id);}}/>;
         if(isLocked)
           return <LocationLockScreen t={t} onCheckin={()=>setShowCheckin(true)}/>;
         if(tab==="dashboard")
