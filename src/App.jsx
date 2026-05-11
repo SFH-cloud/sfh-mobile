@@ -443,6 +443,58 @@ function LocationBar({location,t,onCheckin,onCheckout}){
   );
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// TRANSPARENCY NOTICE — shown once per device on first login
+// Satisfies ICO requirement to inform workers about monitoring
+// ═══════════════════════════════════════════════════════════
+function TransparencyNotice({user,t,onAcknowledge}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(6px)"}}>
+      <div style={{background:t.primary,border:`1px solid ${t.border}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,maxHeight:"85vh",overflow:"auto",padding:"0 0 40px"}}>
+        <div style={{width:40,height:4,background:"#333",borderRadius:4,margin:"12px auto 0"}}/>
+        <div style={{padding:"20px 20px 0"}}>
+          <div style={{fontSize:20,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:4}}>
+            🔒 How we use your data
+          </div>
+          <div style={{fontSize:12,color:t.sub,marginBottom:18}}>
+            Please read before using the Soho House Operations Platform
+          </div>
+
+          {[
+            {icon:"👤",title:"What we collect",desc:"Your name and work activity — tasks completed, locations selected, checkout photos of areas you clean."},
+            {icon:"🎯",title:"Why we collect it",desc:"To manage daily operations, assign work, verify completion of tasks, and generate reports for management."},
+            {icon:"⏱",title:"How long we keep it",desc:"Completed tasks: 12 months. Checkout photos: 90 days. Your name: while employed at Soho House."},
+            {icon:"👁",title:"Who can see it",desc:"Management team only. Data is not shared with third parties or used for any other purpose."},
+            {icon:"📍",title:"Location selection",desc:"You manually select your work area before starting tasks. This is recorded for operational management."},
+            {icon:"📸",title:"Photos",desc:"Photos taken are of the locations you clean — not personal photographs. Used for quality verification only."},
+            {icon:"⚖️",title:"Your rights",desc:"You have the right to access, correct or request deletion of your data. Contact Soho House HR to exercise these rights."},
+            {icon:"📋",title:"Legal basis",desc:"Processing is based on the legitimate interest of Soho House as your employer (UK GDPR Art. 6(1)(f))."},
+          ].map((item,i)=>(
+            <div key={i} style={{display:"flex",gap:12,marginBottom:14,paddingBottom:14,borderBottom:i<7?`1px solid ${t.border}`:"none"}}>
+              <div style={{fontSize:20,flexShrink:0,width:28}}>{item.icon}</div>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:t.text}}>{item.title}</div>
+                <div style={{fontSize:11,color:t.sub,marginTop:3,lineHeight:1.5}}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+
+          <div style={{background:`${t.accent}12`,border:`1px solid ${t.accent}33`,borderRadius:12,padding:"12px 14px",marginBottom:18,fontSize:11,color:t.sub,lineHeight:1.6}}>
+            This notice is provided in accordance with UK GDPR transparency requirements. 
+            For questions contact <strong style={{color:t.accent}}>Soho House HR</strong>.
+          </div>
+
+          <button onClick={onAcknowledge}
+            style={{width:"100%",padding:"15px",background:t.accent,border:"none",borderRadius:14,color:"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+            ✓ I understand — Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // LOGIN
 // ═══════════════════════════════════════════════════════════
@@ -1182,6 +1234,7 @@ export default function App(){
   const [nav,setNav]                 = useState({screen:"dashboard",data:null});
   const [showCheckin,setShowCheckin] = useState(false);
   const [showCheckout,setShowCheckout] = useState(false);
+  const [showTransparency,setShowTransparency] = useState(false);
   const [loading,setLoading]         = useState(true);
 
   const loadData=useCallback(async()=>{
@@ -1216,6 +1269,15 @@ export default function App(){
   // Location selection is manual — no NFC URL param detection needed
 
   const saveTasks=async t=>{await stor.set(SK.tasks,t);setTasks(t);};
+  const logAudit=async(action,details={})=>{
+    try{
+      await fetch(SUPABASE_URL+"/rest/v1/sfh_audit_log",{
+        method:"POST",
+        headers:{..._h,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({action,actor_id:user?.id,actor_name:user?.name,details}),
+      });
+    }catch(e){}
+  };
   const addRepair=async r=>{const n=[...repairs,r];await stor.set(SK.repairs,n);setRepairs(n);};
   const addOrder=async o=>{const n=[...orders,o];await stor.set(SK.orders,n);setOrders(n);};
   const addInspection=async i=>{const n=[...inspections,i];await stor.set(SK.inspections,n);setInspections(n);};
@@ -1256,6 +1318,11 @@ export default function App(){
     await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role});
     // Subscribe to push notifications
     subscribeToPush(u.id);
+    // Show transparency notice on first use of this device
+    const noticeKey="sfh_notice_v1_"+u.id;
+    if(!localStorage.getItem(noticeKey)){
+      setShowTransparency(true);
+    }
   };
   const logout=async()=>{
     if(user)await stor.del(SK.locPrefix+user.id);
@@ -1322,7 +1389,13 @@ export default function App(){
         );
       })()}
 
-      {/* NFC check-in modal */}
+      {/* Transparency notice — shown once per device */}
+      {showTransparency&&<TransparencyNotice user={user} t={t} onAcknowledge={()=>{
+        localStorage.setItem("sfh_notice_v1_"+user.id,"1");
+        setShowTransparency(false);
+      }}/>}
+
+      {/* Location check-in modal */}
       {showCheckin&&<LocationSelectModal user={user} t={t} onCheckin={handleCheckin} onClose={()=>setShowCheckin(false)}/>}
 
       {/* Checkout photo modal */}
