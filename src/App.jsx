@@ -380,7 +380,7 @@ function LocationSelectModal({user,t,onCheckin,onClose,currentLocation}){
   // If already in a location — block and show message
   if(currentLocation){
     return(
-      <Modal title="Location Already Active" t={t} onClose={onClose}>
+      <Modal title="Work Area Already Active" t={t} onClose={onClose}>
         <div style={{textAlign:"center",padding:"24px 0"}}>
           <div style={{fontSize:48,marginBottom:16}}>🔒</div>
           <div style={{fontSize:16,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:10}}>
@@ -407,7 +407,7 @@ function LocationSelectModal({user,t,onCheckin,onClose,currentLocation}){
   };
 
   return(
-    <Modal title="Select Location Being Cleaned" t={t} onClose={onClose}>
+    <Modal title="Select Work Area" t={t} onClose={onClose}>
       <div style={{marginBottom:12}}>
         <Inp value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search location…"/>
       </div>
@@ -441,8 +441,8 @@ function LocationBar({location,t,onCheckin,onCheckout}){
         <button onClick={onCheckin} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"#ffffff08",border:`2px dashed ${t.border}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
           <span style={{fontSize:20}}>📍</span>
           <div style={{flex:1,textAlign:"left"}}>
-            <div style={{fontSize:13,fontWeight:700,color:t.sub}}>Select location being cleaned</div>
-            <div style={{fontSize:10,color:"#444",marginTop:1}}>Select the location you are about to clean</div>
+            <div style={{fontSize:13,fontWeight:700,color:t.sub}}>Select work area</div>
+            <div style={{fontSize:10,color:"#444",marginTop:1}}>Pick the area you are working in</div>
           </div>
           <span style={{color:t.accent,fontSize:18}}>›</span>
         </button>
@@ -797,7 +797,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
               value={startLoc}
               onChange={e=>setStartLoc(e.target.value)}
               style={{width:"100%",boxSizing:"border-box",background:"#ffffff09",border:`1px solid ${startLoc?t.accent:t.border}`,borderRadius:10,padding:"11px 14px",color:startLoc?t.text:"#888",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none"}}>
-              <option value="">Select your current location…</option>
+              <option value="">Select work area…</option>
               {LOCATIONS.map(l=><option key={l} value={l}>{l}{l===taskLoc?" ✓ (this task)":""}</option>)}
             </select>
             {startLoc&&startLoc!==taskLoc&&(
@@ -834,7 +834,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
             onClick={handleStart}
             disabled={!startLoc||!startPhoto}
             style={{width:"100%",padding:"16px",background:(!startLoc||!startPhoto)?"#1e1e38":t.accent,border:"none",borderRadius:14,color:(!startLoc||!startPhoto)?"#555":"#000",fontWeight:800,fontSize:16,cursor:(!startLoc||!startPhoto)?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-            {!startLoc?"Select location first":!startPhoto?"Take start photo first":"▶ Start Work"}
+            {!startLoc?"Select work area first":!startPhoto?"Take start photo first":"▶ Start Work"}
           </button>
         </div>
       )}
@@ -1082,13 +1082,13 @@ function LocationLockScreen({t, onCheckin}){
         📍
       </div>
       <div style={{fontSize:22,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:8}}>
-        Select location being cleaned first
+        Select work area first
       </div>
       <div style={{fontSize:14,color:t.sub,lineHeight:1.6,maxWidth:280,marginBottom:32}}>
         You must select your work location before you can submit requests or reports.
       </div>
       <button onClick={onCheckin} style={{padding:"14px 28px",background:t.accent,border:"none",borderRadius:14,color:"#000",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:20}}>📍</span> Select Location
+        <span style={{fontSize:20}}>📍</span> Select Work Area
       </button>
     </div>
   );
