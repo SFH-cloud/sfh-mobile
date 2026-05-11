@@ -373,9 +373,31 @@ function CheckoutPhotoModal({location,user,t,onComplete,onCancel}){
 // ═══════════════════════════════════════════════════════════
 // LOCATION SELECT MODAL — manual location selection
 // ═══════════════════════════════════════════════════════════
-function LocationSelectModal({user,t,onCheckin,onClose}){
+function LocationSelectModal({user,t,onCheckin,onClose,currentLocation}){
   const [tapped,setTapped] = useState("");
   const [search,setSearch] = useState("");
+
+  // If already in a location — block and show message
+  if(currentLocation){
+    return(
+      <Modal title="Location Already Active" t={t} onClose={onClose}>
+        <div style={{textAlign:"center",padding:"24px 0"}}>
+          <div style={{fontSize:48,marginBottom:16}}>🔒</div>
+          <div style={{fontSize:16,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:10}}>
+            {currentLocation.name}
+          </div>
+          <div style={{fontSize:13,color:t.sub,lineHeight:1.6,marginBottom:24,maxWidth:280,margin:"0 auto 24px"}}>
+            You are currently cleaning <strong style={{color:t.accent}}>{currentLocation.name}</strong>.
+            You must take a checkout photo before selecting a new location.
+          </div>
+          <button onClick={onClose}
+            style={{width:"100%",padding:"13px",background:t.accent,border:"none",borderRadius:12,color:"#000",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+            Back — finish current location first
+          </button>
+        </div>
+      </Modal>
+    );
+  }
 
   const filtered = LOCATIONS.filter(l => l.toLowerCase().includes(search.toLowerCase()));
 
@@ -385,7 +407,7 @@ function LocationSelectModal({user,t,onCheckin,onClose}){
   };
 
   return(
-    <Modal title="Select Your Location" t={t} onClose={onClose}>
+    <Modal title="Select Location Being Cleaned" t={t} onClose={onClose}>
       <div style={{marginBottom:12}}>
         <Inp value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search location…"/>
       </div>
@@ -419,8 +441,8 @@ function LocationBar({location,t,onCheckin,onCheckout}){
         <button onClick={onCheckin} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"#ffffff08",border:`2px dashed ${t.border}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
           <span style={{fontSize:20}}>📍</span>
           <div style={{flex:1,textAlign:"left"}}>
-            <div style={{fontSize:13,fontWeight:700,color:t.sub}}>Select your location</div>
-            <div style={{fontSize:10,color:"#444",marginTop:1}}>Required before starting work</div>
+            <div style={{fontSize:13,fontWeight:700,color:t.sub}}>Select location being cleaned</div>
+            <div style={{fontSize:10,color:"#444",marginTop:1}}>Select the location you are about to clean</div>
           </div>
           <span style={{color:t.accent,fontSize:18}}>›</span>
         </button>
@@ -430,7 +452,7 @@ function LocationBar({location,t,onCheckin,onCheckout}){
             <span style={{fontSize:20}}>📍</span>
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700,color:t.accent}}>{location.name}</div>
-              <div style={{fontSize:10,color:t.sub,marginTop:1}}>Since {location.time} · complete checkout before leaving</div>
+              <div style={{fontSize:10,color:t.sub,marginTop:1}}>Since {location.time} · take a checkout photo before moving to another location</div>
             </div>
             <div style={{width:8,height:8,borderRadius:"50%",background:"#22c55e"}}/>
           </div>
@@ -1060,7 +1082,7 @@ function LocationLockScreen({t, onCheckin}){
         📍
       </div>
       <div style={{fontSize:22,fontWeight:800,color:t.text,fontFamily:"'DM Serif Display',serif",marginBottom:8}}>
-        Select your location first
+        Select location being cleaned first
       </div>
       <div style={{fontSize:14,color:t.sub,lineHeight:1.6,maxWidth:280,marginBottom:32}}>
         You must select your work location before you can submit requests or reports.
@@ -1396,7 +1418,7 @@ export default function App(){
       }}/>}
 
       {/* Location check-in modal */}
-      {showCheckin&&<LocationSelectModal user={user} t={t} onCheckin={handleCheckin} onClose={()=>setShowCheckin(false)}/>}
+      {showCheckin&&<LocationSelectModal user={user} t={t} onCheckin={handleCheckin} onClose={()=>setShowCheckin(false)} currentLocation={location}/>}
 
       {/* Checkout photo modal */}
       {showCheckout&&<CheckoutPhotoModal location={location?.name||""} user={user} t={t} onComplete={handleCheckoutComplete} onCancel={()=>setShowCheckout(false)}/>}
