@@ -803,8 +803,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
             <select
               value={startLoc}
               onChange={e=>setStartLoc(e.target.value)}
-              disabled={!!lockedToLocation}
-              style={{width:"100%",boxSizing:"border-box",background:"#ffffff09",border:`1px solid ${startLoc?t.accent:t.border}`,borderRadius:10,padding:"11px 14px",color:startLoc?t.text:"#888",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",opacity:lockedToLocation?0.7:1,cursor:lockedToLocation?"not-allowed":"pointer"}}>
+              disabled={!!lockedToLocation||started}
+              style={{width:"100%",boxSizing:"border-box",background:"#ffffff09",border:`1px solid ${startLoc?t.accent:t.border}`,borderRadius:10,padding:"11px 14px",color:startLoc?t.text:"#888",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",opacity:(lockedToLocation||started)?0.7:1,cursor:(lockedToLocation||started)?"not-allowed":"pointer"}}>
               <option value="">Select work area…</option>
               {LOCATIONS.map(l=><option key={l} value={l}>{l}{l===taskLoc?" ✓ (this task)":""}</option>)}
             </select>
@@ -1342,11 +1342,19 @@ export default function App(){
   };
 
   const login=async u=>{
-    // Clear any previous location on new login — ensures only one active location
-    await stor.del(SK.locPrefix+u.id);
-    setLocation(null);
+    // Only clear location if a DIFFERENT user is logging in
+    // Same user re-logging keeps their active location
+    const currentCu=await stor.get(SK.cu);
+    if(currentCu && currentCu.id !== u.id){
+      // Different user — clear previous user's location
+      await stor.del(SK.locPrefix+currentCu.id);
+    }
     setUser(u);
     await stor.set(SK.cu,{id:u.id,name:u.name,role:u.role});
+    // Restore location for this user
+    const existingLoc=await stor.get(SK.locPrefix+u.id);
+    if(existingLoc) setLocation(existingLoc);
+    else setLocation(null);
     // Subscribe to push notifications
     subscribeToPush(u.id);
     // Show transparency notice on first use of this device
