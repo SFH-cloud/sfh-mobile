@@ -1243,6 +1243,27 @@ function ProfileScreen({user,tasks,location,t,onLogout}){
       <button onClick={onLogout} style={{width:"100%",padding:"13px",background:"transparent",border:"2px solid #ef444444",borderRadius:14,color:"#ef4444",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
         <Ic d={P.logout} s={16} c="#ef4444"/> Sign Out
       </button>
+
+      {/* GDPR info */}
+      <div style={{marginTop:24,background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:"16px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:t.accent,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>🔒 Data & Privacy</div>
+        {[
+          ["Data collected","Your name and work activity only"],
+          ["Photos","Location checkout photos — not personal"],
+          ["Location","Work premises only, cleared on logout"],
+          ["Retention","Tasks: 12 months · Photos: 90 days"],
+          ["Legal basis","Employer legitimate interest (UK GDPR)"],
+          ["Your rights","Contact Soho House HR for data requests"],
+        ].map(([k,v],i)=>(
+          <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,paddingBottom:8,borderBottom:i<5?`1px solid ${t.border}`:"none",gap:10}}>
+            <div style={{fontSize:11,color:t.sub,flexShrink:0}}>{k}</div>
+            <div style={{fontSize:11,color:t.text,textAlign:"right"}}>{v}</div>
+          </div>
+        ))}
+        <div style={{marginTop:8,fontSize:10,color:t.sub,textAlign:"center"}}>
+          Soho House Operations Platform · Data stored in EU (Stockholm)
+        </div>
+      </div>
     </div>
   );
 }
