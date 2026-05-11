@@ -675,6 +675,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
   const [showCam,setShowCam]=useState(false);
   const [showStartCam,setShowStartCam]=useState(false);
   const [startLoc,setStartLoc]=useState(location?.name||"");
+  // If already in a location, lock startLoc to that location
+  const lockedToLocation = location?.name || null;
   const [startPhoto,setStartPhoto]=useState(null);
   // Track if a NEW correction photo was taken (separate from start photo)
   const [correctionPhotoDone,setCorrectionPhotoDone]=useState(false);
@@ -720,6 +722,11 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
   const taskLoc = task.location||"";
 
   const handleStart=async()=>{
+    // Block if already working in a DIFFERENT location — must checkout first
+    if(location && location.name && location.name !== startLoc){
+      alert("You are currently working in "+location.name+".\nPlease take a checkout photo before starting work in "+startLoc+".");
+      return;
+    }
     setStarted(true);
     const startPhotos=[{id:uid(),dataUrl:startPhoto,time:tf(),type:"start"},...(hasReturnNote?[]:init.photos||[])];
     setPhotos(startPhotos);
@@ -796,7 +803,8 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
             <select
               value={startLoc}
               onChange={e=>setStartLoc(e.target.value)}
-              style={{width:"100%",boxSizing:"border-box",background:"#ffffff09",border:`1px solid ${startLoc?t.accent:t.border}`,borderRadius:10,padding:"11px 14px",color:startLoc?t.text:"#888",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none"}}>
+              disabled={!!lockedToLocation}
+              style={{width:"100%",boxSizing:"border-box",background:"#ffffff09",border:`1px solid ${startLoc?t.accent:t.border}`,borderRadius:10,padding:"11px 14px",color:startLoc?t.text:"#888",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",opacity:lockedToLocation?0.7:1,cursor:lockedToLocation?"not-allowed":"pointer"}}>
               <option value="">Select work area…</option>
               {LOCATIONS.map(l=><option key={l} value={l}>{l}{l===taskLoc?" ✓ (this task)":""}</option>)}
             </select>
@@ -806,6 +814,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
               </div>
             )}
             {startLoc===taskLoc&&<div style={{marginTop:6,fontSize:11,color:t.accent}}>✓ Correct location</div>}
+            {lockedToLocation&&<div style={{marginTop:6,fontSize:11,color:t.sub}}>📍 Work area locked — take checkout photo to change location</div>}
           </div>
 
           {/* Step 2 — Start photo (live camera only) */}
