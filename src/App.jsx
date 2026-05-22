@@ -112,6 +112,35 @@ const stor = {
 
 
 // ═══════════════════════════════════════════════════════════
+// PHOTO UPLOAD — Supabase Storage (no base64 in DB)
+// ═══════════════════════════════════════════════════════════
+const uploadPhoto = async (dataUrl, folder = "photos") => {
+  try {
+    // Convert base64 dataUrl to blob
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const ext = blob.type === "image/png" ? "png" : "jpg";
+    const filename = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+    const uploadRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/sfh-photos/${filename}`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": blob.type,
+          "x-upsert": "true",
+        },
+        body: blob,
+      }
+    );
+    if (!uploadRes.ok) return null;
+    // Return public URL
+    return `${SUPABASE_URL}/storage/v1/object/public/sfh-photos/${filename}`;
+  } catch { return null; }
+};
+
+// ═══════════════════════════════════════════════════════════
 // THEME
 // ═══════════════════════════════════════════════════════════
 const TH = {
@@ -300,14 +329,14 @@ function CheckoutPhotoModal({location,user,t,onComplete,onCancel}){
   const [photo,setPhoto]=useState(null);
   const [note,setNote]=useState("");
 
-  const handleCapture=dataUrl=>{
-    setPhoto(dataUrl);
+  const handleCapture=dataUrl=>{\n    setPhoto(dataUrl);
   };
 
-  const confirm=()=>{
+  const confirm=async()=>{
     if(!photo)return;
+    const url = await uploadPhoto(photo, "checkouts") || photo;
     onComplete({
-      photo,note,location,userId:user.id,userName:user.name,
+      photo:url,note,location,userId:user.id,userName:user.name,
       time:tf(),date:tod(),id:uid()
     });
   };
@@ -692,24 +721,12 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
     save({checklist:cl,status:task.status==="done"?"done":"in_progress"});
   };
   // handleCapture preserves all existing task fields including notes
-  const handleCapture=async(dataUrl)=>{
-    // Compress before saving — max 600px wide, 70% quality JPEG
-    const compressed=await new Promise(res=>{
-      const img=new Image();
-      img.onload=()=>{
-        const s=Math.min(1,600/img.width);
-        const c=document.createElement("canvas");
-        c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
-        c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-        res(c.toDataURL("image/jpeg",0.7));
-      };
-      img.src=dataUrl;
-    });
-    const p=[...photos,{id:uid(),dataUrl:compressed,time:tf()}];
+  const handleCapture=async(dataUrl)=>{\n    // Upload to Supabase Storage — no base64 in DB
+    const url = await uploadPhoto(dataUrl, "evidence") || dataUrl;
+    const p=[...photos,{id:uid(),url,time:tf()}];
     setPhotos(p);
     if(hasReturnNote) setCorrectionPhotoDone(true);
-    setTask(prev=>{
-      const updated={...prev,photos:p};
+    setTask(prev=>{\n      const updated={...prev,photos:p};
       onSave(updated);
       return updated;
     });
@@ -736,18 +753,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
     if(onSetLocation) onSetLocation(locObj);
     // Push to Supabase as live location (with compressed photo)
     if(user){
-      const compressPhoto=async(dataUrl,maxW=480)=>new Promise(resolve=>{
-        const img=new Image();
-        img.onload=()=>{
-          const s=Math.min(1,maxW/img.width);
-          const c=document.createElement("canvas");
-          c.width=img.width*s;c.height=img.height*s;
-          c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-          resolve(c.toDataURL("image/jpeg",0.6));
-        };
-        img.src=dataUrl;
-      });
-      const thumb=await compressPhoto(startPhoto);
+      const thumb = await uploadPhoto(startPhoto, "start-photos") || startPhoto;
       const locRecord={...locObj,
         location:startLoc,  // explicit field for admin panel
         userId:user.id,userName:user.name,role:user.role,
@@ -910,7 +916,7 @@ function TaskDetail({task:init,user,t,onBack,onSave,location,onSetLocation,onCle
           {evidencePhotos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
             {evidencePhotos.map(ph=>(
               <div key={ph.id} style={{width:68,height:68,borderRadius:10,overflow:"hidden",position:"relative"}}>
-                {ph.dataUrl?<img src={ph.dataUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",background:`${t.accent}15`,border:`1px solid ${t.accent}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic d={P.cam} s={20} c={t.accent}/></div>}
+                {(ph.url||ph.dataUrl)?<img src={ph.url||ph.dataUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",background:`${t.accent}15`,border:`1px solid ${t.accent}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic d={P.cam} s={20} c={t.accent}/></div>}
                 <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#000000aa",fontSize:7,color:"#fff",padding:"2px 4px",textAlign:"center"}}>{ph.time}</div>
               </div>
             ))}
